@@ -1,0 +1,73 @@
+{#
+  Shared public site header.
+  Expects in scope: `categories` (iterable of category values).
+  Optional in scope: `top_stories` (list of Post) — used for the breaking ticker.
+             `active_category` (string) — highlights a nav item.
+#}
+<div class="utility-bar">
+  <div class="site-wrap utility-inner">
+    <div class="util-left">
+      <span class="util-date">{{ now.strftime('%A, %d %B %Y') }}</span>
+      <span class="util-sep" aria-hidden="true">|</span>
+      <span class="util-loc">DSVV &middot; Haridwar</span>
+    </div>
+    <div class="util-right">
+      <a href="{{ url_for('web.login') }}" class="util-link">CMS Login</a>
+    </div>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="site-wrap masthead-inner">
+    <a href="{{ url_for('web.news_home') }}" class="brand-block" aria-label="DSVV News home">
+      <p class="brand-title">DSVV<span class="brand-news">NEWS</span></p>
+      <p class="brand-tag">Dev Sanskriti Vishwavidyalaya &middot; Haridwar</p>
+    </a>
+    <form class="masthead-search" method="GET" action="{{ url_for('web.news_home') }}" role="search">
+      <label class="visually-hidden" for="site-search">Search stories</label>
+      <input id="site-search" type="search" name="q" placeholder="Search stories, topics, people…" autocomplete="off" />
+      <button type="submit" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </form>
+  </div>
+</header>
+
+<nav class="nav-main" aria-label="Primary">
+  <div class="site-wrap nav-inner">
+    <a href="{{ url_for('web.news_home') }}"
+       class="nav-item {% if request.endpoint == 'web.news_home' %}active{% endif %}">Home</a>
+    {% for c in categories %}
+      <a href="{{ url_for('web.news_category', category=c) }}"
+         class="nav-item {% if active_category == c %}active{% endif %}">{{ c|replace('_',' ')|title }}</a>
+    {% endfor %}
+  </div>
+</nav>
+
+<div class="breaking-strip" aria-label="Breaking news">
+  <div class="site-wrap breaking-inner">
+    <div class="breaking-chip">
+      <span class="live-dot" aria-hidden="true"></span>
+      BREAKING
+    </div>
+    <div class="breaking-track">
+      {% if top_stories %}
+      <div class="breaking-marquee">
+        {% for p in top_stories %}
+          <a href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+          <span class="sep" aria-hidden="true">&bull;</span>
+        {% endfor %}
+        {# Duplicate for seamless looping; hidden from assistive tech to avoid repetition. #}
+        <span aria-hidden="true" class="breaking-marquee-dupe">
+          {% for p in top_stories %}
+            <a href="{{ url_for('web.news_detail', slug=p.slug) }}" tabindex="-1">{{ p.title }}</a>
+            <span class="sep" aria-hidden="true">&bull;</span>
+          {% endfor %}
+        </span>
+      </div>
+      {% else %}
+      <div class="breaking-muted">Stay tuned for the latest updates from campus.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>

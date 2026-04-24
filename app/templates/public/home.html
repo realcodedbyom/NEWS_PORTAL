@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DSVV News · Haridwar</title>
+  <meta name="description" content="Latest news, academics, culture, research, events and announcements from Dev Sanskriti Vishwavidyalaya, Haridwar." />
+  <meta name="theme-color" content="#EE1C25" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
+</head>
+<body>
+  {% include 'public/_header.html' %}
+
+  <main id="main">
+    <div class="site-wrap">
+
+      {# ---------- HERO ---------- #}
+      <section class="hero-wrap" aria-label="Top stories">
+        <article class="hero-main">
+          {% if featured_story %}
+            {% if featured_story.featured_image %}
+              <a class="hero-media" href="{{ url_for('web.news_detail', slug=featured_story.slug) }}">
+                <img src="{{ featured_story.featured_image.url }}"
+                     alt="{{ featured_story.featured_image.alt_text or featured_story.title }}"
+                     loading="eager" fetchpriority="high" />
+              </a>
+            {% endif %}
+            <div class="hero-body">
+              <p class="kicker">FEATURED · {{ featured_story.category|replace('_',' ')|title }}</p>
+              <h2 class="hero-title">
+                <a href="{{ url_for('web.news_detail', slug=featured_story.slug) }}">{{ featured_story.title }}</a>
+              </h2>
+              {% if featured_story.excerpt or featured_story.subtitle %}
+                <p class="hero-excerpt">{{ featured_story.excerpt or featured_story.subtitle }}</p>
+              {% endif %}
+              <p class="story-meta">
+                <span>By DSVV Newsroom</span>
+                <span class="meta-sep" aria-hidden="true">·</span>
+                {% if featured_story.published_at %}<span>{{ featured_story.published_at.strftime('%d %b %Y, %I:%M %p') }}</span>{% endif %}
+                <span class="meta-sep" aria-hidden="true">·</span>
+                <span>{{ featured_story.view_count }} views</span>
+              </p>
+            </div>
+          {% else %}
+            <div class="hero-empty">
+              <p class="kicker">WELCOME</p>
+              <h2 class="hero-title">Stories from our campus, in your feed.</h2>
+              <p class="hero-excerpt">Follow the latest from academics, research, culture, events and more at Dev Sanskriti Vishwavidyalaya. New to the newsroom? <a href="{{ url_for('web.login') }}">Sign in to publish</a>.</p>
+            </div>
+          {% endif %}
+        </article>
+
+        <aside class="hero-aside" aria-label="Top stories">
+          <div class="aside-head">
+            <h2>Top Stories</h2>
+          </div>
+          {% if top_stories %}
+            <ol class="top-stories">
+              {% for p in top_stories[:6] %}
+              <li>
+                <span class="top-num">{{ loop.index }}</span>
+                <div class="top-body">
+                  <p class="top-kicker">{{ p.category|replace('_',' ')|title }}</p>
+                  <a class="top-title" href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+                </div>
+                {% if p.featured_image %}
+                  <img class="top-thumb" src="{{ p.featured_image.url }}" alt="" loading="lazy" />
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ol>
+          {% else %}
+            <p class="empty">No stories yet. Check back soon.</p>
+          {% endif %}
+        </aside>
+      </section>
+
+      {# ---------- LATEST NEWS RAIL ---------- #}
+      {% if latest_updates %}
+      <section aria-label="Latest news">
+        <div class="section-head">
+          <h2 class="section-title">Latest News</h2>
+        </div>
+        <div class="card-grid">
+          {% for p in latest_updates[:8] %}
+          <article class="news-card">
+            {% if p.featured_image %}
+              <a class="card-media" href="{{ url_for('web.news_detail', slug=p.slug) }}">
+                <img src="{{ p.featured_image.url }}" alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" />
+              </a>
+            {% endif %}
+            <div class="card-body">
+              <p class="kicker">{{ p.category|replace('_',' ')|title }}</p>
+              <h3 class="card-title">
+                <a href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+              </h3>
+              {% if p.excerpt %}<p class="card-excerpt">{{ p.excerpt }}</p>{% endif %}
+              <p class="card-meta">
+                {% if p.published_at %}{{ p.published_at.strftime('%d %b %Y') }}{% endif %}
+              </p>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# ---------- PER-CATEGORY SECTIONS ---------- #}
+      {% for category, posts in by_category.items() %}
+        {% if posts %}
+        <section aria-label="{{ category|title }}">
+          <div class="section-head with-link">
+            <h2 class="section-title">{{ category|replace('_',' ')|upper }}</h2>
+            <a class="section-link" href="{{ url_for('web.news_category', category=category) }}">View All →</a>
+          </div>
+          <div class="card-grid">
+            {% for p in posts[:4] %}
+            <article class="news-card">
+              {% if p.featured_image %}
+                <a class="card-media" href="{{ url_for('web.news_detail', slug=p.slug) }}">
+                  <img src="{{ p.featured_image.url }}" alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" />
+                </a>
+              {% endif %}
+              <div class="card-body">
+                <p class="kicker">{{ p.category|replace('_',' ')|title }}</p>
+                <h3 class="card-title">
+                  <a href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+                </h3>
+                {% if p.excerpt %}<p class="card-excerpt">{{ p.excerpt }}</p>{% endif %}
+                <p class="card-meta">
+                  {% if p.published_at %}{{ p.published_at.strftime('%d %b %Y') }}{% endif %}
+                </p>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+      {% endfor %}
+
+      {# ---------- MOST READ STRIP ---------- #}
+      {% if top_stories %}
+      <section class="trending-strip" aria-label="Most read">
+        <h2 class="trending-title">Most Read</h2>
+        <div class="trending-track">
+          {% for p in top_stories[:6] %}
+          <a class="trending-chip" href="{{ url_for('web.news_detail', slug=p.slug) }}">
+            <span class="trending-num">{{ '%02d' % loop.index }}</span>
+            <span class="trending-text">{{ p.title }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </main>
+
+  {% include 'public/_footer.html' %}
+</body>
+</html>

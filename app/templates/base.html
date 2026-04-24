@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#c2410c" />
+  <title>{% block title %}DSVV Newsroom{% endblock %} &middot; DSVV CMS</title>
+  <link rel="stylesheet" href="{{ url_for('web.static', filename='css/main.css') }}" />
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  {% if current_user %}
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">DS</span>
+        <div class="brand-text">
+          <strong>DSVV</strong>
+          <span>Newsroom</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="{{ url_for('web.dashboard') }}"
+           class="nav-link {% if request.endpoint == 'web.dashboard' %}is-active{% endif %}">
+          <span class="nav-dot"></span> Dashboard
+        </a>
+        <a href="{{ url_for('web.posts_list') }}"
+           class="nav-link {% if request.endpoint and request.endpoint.startswith('web.post') %}is-active{% endif %}">
+          <span class="nav-dot"></span> Posts
+        </a>
+        <a href="{{ url_for('web.alumni_list') }}"
+           class="nav-link {% if request.endpoint and request.endpoint.startswith('web.alumni') %}is-active{% endif %}">
+          <span class="nav-dot"></span> Alumni
+        </a>
+        <a href="{{ url_for('web.media_list') }}"
+           class="nav-link {% if request.endpoint and request.endpoint.startswith('web.media') %}is-active{% endif %}">
+          <span class="nav-dot"></span> Media
+        </a>
+        {% if current_user.has_role(RoleName.ADMIN.value) %}
+        <a href="{{ url_for('web.users_list') }}"
+           class="nav-link {% if request.endpoint and request.endpoint.startswith('web.users') %}is-active{% endif %}">
+          <span class="nav-dot"></span> Users
+        </a>
+        {% endif %}
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="avatar" aria-hidden="true">{{ current_user.name[:1].upper() }}</div>
+          <div class="user-meta">
+            <strong>{{ current_user.name }}</strong>
+            <span>{{ current_user.role_names() | join(', ') }}</span>
+          </div>
+        </div>
+        <form method="POST" action="{{ url_for('web.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-ghost btn-sm">Sign out</button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1>{% block heading %}{{ self.title() }}{% endblock %}</h1>
+          {% block subheading %}{% endblock %}
+        </div>
+        <div class="page-actions">{% block actions %}{% endblock %}</div>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <section class="page-body">
+        {% block content %}{% endblock %}
+      </section>
+    </main>
+  </div>
+  {% else %}
+    {% block fullscreen %}{% endblock %}
+  {% endif %}
+</body>
+</html>

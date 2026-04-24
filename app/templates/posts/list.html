@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Posts{% endblock %}
+{% block subheading %}<p class="muted">Manage drafts, review queue, and published stories.</p>{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.post_new') }}" class="btn btn-primary">New post</a>
+{% endblock %}
+
+{% block content %}
+<form method="GET" action="{{ url_for('web.posts_list') }}" class="filter-bar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search by title or slug..." />
+  <select name="status">
+    <option value="">All statuses</option>
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s.replace('_', ' ') }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary">Filter</button>
+</form>
+
+{% if posts %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Author</th>
+        <th>Updated</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+          <p class="row-meta muted">/{{ p.slug }}</p>
+        </td>
+        <td><span class="tag tag-neutral">{{ p.category }}</span></td>
+        <td><span class="tag status-{{ p.status }}">{{ p.status.replace('_', ' ') }}</span></td>
+        <td>{{ p.author.name if p.author else '—' }}</td>
+        <td class="muted">{{ p.updated_at.strftime('%b %d, %Y') }}</td>
+        <td class="col-actions">
+          <a href="{{ url_for('web.post_edit', post_id=p.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <p class="empty">No posts match your filters.</p>
+{% endif %}
+{% endblock %}

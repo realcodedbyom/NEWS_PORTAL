@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{% if alumni %}Edit: {{ alumni.name }}{% else %}New alumni{% endif %}{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.alumni_list') }}" class="btn btn-ghost">Cancel</a>
+  {% if alumni and current_user.has_role(RoleName.ADMIN.value) %}
+    <form method="POST" action="{{ url_for('web.alumni_delete', alumni_id=alumni.id) }}"
+          onsubmit="return confirm('Delete this alumni record?');" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form method="POST" class="form panel"
+      action="{% if alumni %}{{ url_for('web.alumni_edit', alumni_id=alumni.id) }}{% else %}{{ url_for('web.alumni_new') }}{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+  <div class="grid-2">
+    <label class="field">
+      <span>Full name</span>
+      <input type="text" name="name" value="{{ form.name or '' }}" required maxlength="150" />
+    </label>
+    <label class="field">
+      <span>Email</span>
+      <input type="email" name="email" value="{{ form.email or '' }}" maxlength="150" />
+    </label>
+    <label class="field">
+      <span>Graduation year</span>
+      <input type="number" name="graduation_year" value="{{ form.graduation_year or '' }}" min="1900" max="2100" required />
+    </label>
+    <label class="field">
+      <span>Course</span>
+      <input type="text" name="course" value="{{ form.course or '' }}" required maxlength="150" />
+    </label>
+    <label class="field">
+      <span>Current role</span>
+      <input type="text" name="current_role" value="{{ form.current_role or '' }}" maxlength="150" />
+    </label>
+    <label class="field">
+      <span>Company</span>
+      <input type="text" name="company" value="{{ form.company or '' }}" maxlength="150" />
+    </label>
+    <label class="field">
+      <span>Location</span>
+      <input type="text" name="location" value="{{ form.location or '' }}" maxlength="150" />
+    </label>
+  </div>
+
+  <label class="field">
+    <span>Bio</span>
+    <textarea name="bio" rows="4">{{ form.bio or '' }}</textarea>
+  </label>
+
+  <fieldset class="checks">
+    <legend>Flags</legend>
+    <label><input type="checkbox" name="is_featured" {% if form.is_featured %}checked{% endif %} /> Featured</label>
+    <label><input type="checkbox" name="is_verified" {% if form.is_verified %}checked{% endif %} /> Verified</label>
+  </fieldset>
+
+  <button type="submit" class="btn btn-primary">
+    {% if alumni %}Save changes{% else %}Create record{% endif %}
+  </button>
+</form>
+{% endblock %}

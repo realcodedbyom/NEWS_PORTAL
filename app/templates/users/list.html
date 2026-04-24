@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block subheading %}<p class="muted">Manage editors, writers, and admins.</p>{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h3>Add new user</h3>
+  <form method="POST" action="{{ url_for('web.users_create') }}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="grid-3">
+      <label class="field">
+        <span>Name</span>
+        <input type="text" name="name" required maxlength="120" />
+      </label>
+      <label class="field">
+        <span>Email</span>
+        <input type="email" name="email" required maxlength="150" />
+      </label>
+      <label class="field">
+        <span>Temporary password</span>
+        <input type="password" name="password" required minlength="8" />
+      </label>
+    </div>
+    <fieldset class="checks">
+      <legend>Roles</legend>
+      {% for r in roles %}
+        <label><input type="checkbox" name="roles" value="{{ r.name }}" /> {{ r.name }}</label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit" class="btn btn-primary">Create user</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h3>All users</h3>
+  {% if users %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th>Last login</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td><strong>{{ u.name }}</strong></td>
+          <td class="muted">{{ u.email }}</td>
+          <td>
+            {% for r in u.roles %}<span class="tag tag-neutral">{{ r.name }}</span>{% endfor %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="tag status-published">Active</span>
+            {% else %}
+              <span class="tag status-archived">Disabled</span>
+            {% endif %}
+          </td>
+          <td class="muted">
+            {% if u.last_login_at %}{{ u.last_login_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
+          </td>
+          <td class="col-actions">
+            {% if u.id != current_user.id %}
+              <form method="POST" action="{{ url_for('web.users_toggle', user_id=u.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost btn-sm">
+                  {% if u.is_active %}Disable{% else %}Enable{% endif %}
+                </button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">No users yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

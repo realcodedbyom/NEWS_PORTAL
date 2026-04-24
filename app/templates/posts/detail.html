@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block subheading %}
+  <p class="muted">
+    <span class="tag status-{{ post.status }}">{{ post.status.replace('_', ' ') }}</span>
+    &middot; <span>/{{ post.slug }}</span>
+    &middot; <span>by {{ post.author.name if post.author else 'Unknown' }}</span>
+  </p>
+{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.post_edit', post_id=post.id) }}" class="btn btn-secondary">Edit</a>
+  {% if current_user.has_role(RoleName.ADMIN.value) %}
+    <form method="POST" action="{{ url_for('web.post_delete', post_id=post.id) }}"
+          onsubmit="return confirm('Permanently delete this post?');" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <article class="panel prose">
+    {% if post.subtitle %}<p class="lead">{{ post.subtitle }}</p>{% endif %}
+    {% if post.excerpt %}<blockquote>{{ post.excerpt }}</blockquote>{% endif %}
+    <div class="content-body">
+      {{ post.content | safe }}
+    </div>
+  </article>
+
+  <aside class="stack">
+    <section class="panel">
+      <h3>Workflow</h3>
+      <p class="muted small">
+        Current: <strong>{{ post.status.replace('_', ' ') }}</strong>
+      </p>
+      {% if next_statuses %}
+        <form method="POST" action="{{ url_for('web.post_transition', post_id=post.id) }}" class="form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="field">
+            <span>Move to</span>
+            <select name="target" required>
+              {% for s in next_statuses %}
+                <option value="{{ s }}">{{ s.replace('_', ' ') }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span>Note (optional)</span>
+            <textarea name="note" rows="2" maxlength="500"></textarea>
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Apply transition</button>
+        </form>
+      {% else %}
+        <p class="empty small">No transitions available for your role.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h3>Metadata</h3>
+      <dl class="meta-list">
+        <dt>Category</dt><dd>{{ post.category }}</dd>
+        <dt>Tags</dt>
+        <dd>
+          {% if post.tags %}
+            {% for t in post.tags %}<span class="tag tag-neutral">{{ t.name }}</span>{% endfor %}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </dd>
+        <dt>Publish at</dt>
+        <dd>{% if post.publish_at %}{{ post.publish_at.strftime('%b %d, %Y %H:%M') }}{% else %}<span class="muted">—</span>{% endif %}</dd>
+        <dt>Published at</dt>
+        <dd>{% if post.published_at %}{{ post.published_at.strftime('%b %d, %Y %H:%M') }}{% else %}<span class="muted">—</span>{% endif %}</dd>
+        <dt>Views</dt><dd>{{ post.view_count }}</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h3>Version history</h3>
+      {% if versions %}
+        <ul class="row-list compact">
+          {% for v in versions %}
+            <li class="row">
+              <div>
+                <strong>v{{ v.version }}</strong>
+                <p class="row-meta muted small">
+                  {{ v.created_at.strftime('%b %d, %Y %H:%M') }}
+                  {% if v.change_note %}&middot; {{ v.change_note }}{% endif %}
+                </p>
+              </div>
+              <span class="tag status-{{ v.status }}">{{ v.status.replace('_', ' ') }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty small">No versions yet.</p>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

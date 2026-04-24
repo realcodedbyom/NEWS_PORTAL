@@ -1,0 +1,17 @@
+# Python 3.13 compatible pins (all have prebuilt wheels for cp313)
+Flask>=3.0.3,<4.0
+Flask-JWT-Extended>=4.6.0,<5.0
+Flask-Cors>=4.0.1,<5.0
+Flask-WTF>=1.2.1,<2.0
+mongoengine>=0.29.1,<1.0
+pymongo>=4.9.0,<5.0
+python-dotenv>=1.0.1,<2.0
+marshmallow>=3.22.0,<4.0
+bcrypt>=4.2.0,<5.0
+APScheduler>=3.10.4,<4.0
+Pillow>=11.0.0,<12.0
+python-slugify>=8.0.4,<9.0
+gunicorn>=23.0.0,<24.0
+email-validator>=2.2.0,<3.0
+Werkzeug>=3.0.4,<4.0
+Jinja2>=3.1.4,<4.0

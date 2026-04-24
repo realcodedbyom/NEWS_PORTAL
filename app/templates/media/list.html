@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Media library{% endblock %}
+{% block subheading %}<p class="muted">Upload images and videos reusable across posts.</p>{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h3>Upload new file</h3>
+  <form method="POST" enctype="multipart/form-data" class="form" action="{{ url_for('web.media_list') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="grid-2">
+      <label class="field">
+        <span>File</span>
+        <input type="file" name="file" required />
+      </label>
+      <label class="field">
+        <span>Alt text</span>
+        <input type="text" name="alt_text" maxlength="255" />
+      </label>
+    </div>
+    <label class="field">
+      <span>Caption</span>
+      <input type="text" name="caption" maxlength="500" />
+    </label>
+    <button type="submit" class="btn btn-primary">Upload</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h3>Library</h3>
+  {% if items %}
+    <div class="media-grid">
+      {% for m in items %}
+        <figure class="media-card">
+          {% if m.media_type == 'image' %}
+            <img src="{{ m.url }}" alt="{{ m.alt_text or m.original_name }}" loading="lazy" />
+          {% else %}
+            <div class="media-placeholder" aria-hidden="true">{{ m.media_type.upper() }}</div>
+          {% endif %}
+          <figcaption>
+            <strong title="{{ m.original_name }}">{{ m.original_name }}</strong>
+            <span class="muted small">{{ (m.size_bytes / 1024) | round(1) }} KB</span>
+            {% if current_user.has_role(RoleName.EDITOR.value) or current_user.has_role(RoleName.ADMIN.value) %}
+              <form method="POST" action="{{ url_for('web.media_delete', media_id=m.id) }}"
+                    onsubmit="return confirm('Delete this file?');" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost btn-sm">Delete</button>
+              </form>
+            {% endif %}
+          </figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty">No media uploaded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

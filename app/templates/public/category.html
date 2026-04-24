@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ category|replace('_',' ')|title }} · DSVV News</title>
+  <meta name="theme-color" content="#EE1C25" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
+</head>
+<body>
+  {% with active_category = category %}
+    {% include 'public/_header.html' %}
+  {% endwith %}
+
+  <main id="main">
+    <div class="site-wrap">
+
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="{{ url_for('web.news_home') }}">Home</a>
+        <span aria-hidden="true">›</span>
+        <span aria-current="page">{{ category|replace('_',' ')|title }}</span>
+      </nav>
+
+      <header class="page-title-block">
+        <p class="kicker">Section</p>
+        <h1 class="page-title">{{ category|replace('_',' ')|title }}</h1>
+        <p class="page-tagline">Latest stories in {{ category|replace('_',' ')|title }} from Dev Sanskriti Vishwavidyalaya.</p>
+      </header>
+
+      {% if posts %}
+      <section class="category-grid">
+        {% for p in posts %}
+        <article class="news-card tall">
+          {% if p.featured_image %}
+            <a class="card-media" href="{{ url_for('web.news_detail', slug=p.slug) }}">
+              <img src="{{ p.featured_image.url }}" alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" />
+            </a>
+          {% endif %}
+          <div class="card-body">
+            <p class="kicker">{{ p.category|replace('_',' ')|title }}</p>
+            <h2 class="card-title">
+              <a href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+            </h2>
+            {% if p.excerpt %}<p class="card-excerpt">{{ p.excerpt }}</p>{% endif %}
+            <p class="card-meta">
+              {% if p.published_at %}{{ p.published_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
+              <span class="meta-sep" aria-hidden="true">·</span>
+              {{ p.view_count }} views
+            </p>
+          </div>
+        </article>
+        {% endfor %}
+      </section>
+      {% else %}
+      <section class="empty-block">
+        <p class="kicker">Nothing here yet</p>
+        <h2>No stories in this section.</h2>
+        <p>Check back soon — new stories are published throughout the week.</p>
+        <a class="btn-red" href="{{ url_for('web.news_home') }}">Back to homepage</a>
+      </section>
+      {% endif %}
+
+    </div>
+  </main>
+
+  {% include 'public/_footer.html' %}
+</body>
+</html>

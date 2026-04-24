@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block subheading %}<p class="muted">Overview of newsroom activity.</p>{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.post_new') }}" class="btn btn-primary">New post</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card">
+    <p class="stat-label">Total posts</p>
+    <p class="stat-value">{{ summary.posts.total }}</p>
+    <p class="stat-hint">{{ summary.posts.published }} published</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-label">In review</p>
+    <p class="stat-value">{{ summary.posts.in_review }}</p>
+    <p class="stat-hint">Awaiting editor approval</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-label">Scheduled</p>
+    <p class="stat-value">{{ summary.posts.scheduled }}</p>
+    <p class="stat-hint">Queued for auto-publish</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-label">Views (7d)</p>
+    <p class="stat-value">{{ summary.views.last_7_days }}</p>
+    <p class="stat-hint">{{ summary.views.total }} all-time</p>
+  </article>
+</section>
+
+<div class="two-col">
+  <section class="panel">
+    <header class="panel-head">
+      <h2>My recent drafts</h2>
+      <a href="{{ url_for('web.posts_list') }}" class="link">View all</a>
+    </header>
+    {% if my_drafts %}
+      <ul class="row-list">
+        {% for p in my_drafts %}
+          <li class="row">
+            <div>
+              <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+              <p class="row-meta">
+                <span class="tag status-{{ p.status }}">{{ p.status.replace('_', ' ') }}</span>
+                <span class="muted">Updated {{ p.updated_at.strftime('%b %d, %Y') }}</span>
+              </p>
+            </div>
+            <a href="{{ url_for('web.post_edit', post_id=p.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">You haven&apos;t created any posts yet.</p>
+    {% endif %}
+  </section>
+
+  {% if current_user.has_role(RoleName.EDITOR.value) or current_user.has_role(RoleName.ADMIN.value) %}
+  <section class="panel">
+    <header class="panel-head">
+      <h2>Review queue</h2>
+      <a href="{{ url_for('web.posts_list', status=PostStatus.REVIEW.value) }}" class="link">View all</a>
+    </header>
+    {% if review_queue %}
+      <ul class="row-list">
+        {% for p in review_queue %}
+          <li class="row">
+            <div>
+              <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+              <p class="row-meta">
+                <span class="muted">by {{ p.author.name if p.author else 'Unknown' }}</span>
+                &middot;
+                <span class="muted">{{ p.updated_at.strftime('%b %d') }}</span>
+              </p>
+            </div>
+            <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="btn btn-ghost btn-sm">Review</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">Nothing awaiting review right now.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

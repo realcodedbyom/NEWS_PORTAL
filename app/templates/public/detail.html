@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ post.title }} · DSVV News</title>
+  {% if post.excerpt %}<meta name="description" content="{{ post.excerpt }}" />{% endif %}
+  <meta name="theme-color" content="#EE1C25" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
+</head>
+<body>
+  {% with active_category = post.category %}
+    {% include 'public/_header.html' %}
+  {% endwith %}
+
+  <main id="main">
+    <div class="site-wrap">
+
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="{{ url_for('web.news_home') }}">Home</a>
+        <span aria-hidden="true">›</span>
+        <a href="{{ url_for('web.news_category', category=post.category) }}">{{ post.category|replace('_',' ')|title }}</a>
+        <span aria-hidden="true">›</span>
+        <span aria-current="page" class="crumb-current">{{ post.title }}</span>
+      </nav>
+
+      <div class="article-layout">
+        <article class="article-main">
+          <p class="kicker">{{ post.category|replace('_',' ')|title }}</p>
+          <h1 class="article-title">{{ post.title }}</h1>
+          {% if post.subtitle %}<p class="article-subtitle">{{ post.subtitle }}</p>{% endif %}
+
+          <div class="article-byline">
+            <div class="byline-left">
+              <div class="byline-avatar" aria-hidden="true">DS</div>
+              <div>
+                <p class="byline-name">DSVV Newsroom</p>
+                <p class="byline-meta">
+                  {% if post.published_at %}{{ post.published_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
+                  <span class="meta-sep" aria-hidden="true">·</span>
+                  {{ post.view_count }} views
+                </p>
+              </div>
+            </div>
+            <div class="share-row" aria-label="Share">
+              <button type="button" class="share" aria-label="Share on Facebook" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href), '_blank', 'noopener')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13 22v-8h3l1-4h-4V7.5c0-1.1.4-2 2-2h2V2h-3c-3 0-5 1.8-5 5v3H6v4h3v8h4z"/></svg>
+              </button>
+              <button type="button" class="share" aria-label="Share on X" onclick="window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent(window.location.href) + '&text=' + encodeURIComponent(document.title), '_blank', 'noopener')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 3h3l-7.4 8.5L22 21h-6.8l-5.2-6.3L3.8 21H1l7.9-9L1.5 3H8.5l4.7 5.8L18 3zm-2.3 16h1.9L8.5 5H6.5l9.2 14z"/></svg>
+              </button>
+              <button type="button" class="share" aria-label="Share on WhatsApp" onclick="window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(document.title + ' ' + window.location.href), '_blank', 'noopener')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 12a8 8 0 0 1-12 6.9L4 20l1.1-3.9A8 8 0 1 1 20 12zm-8-6a6 6 0 0 0-5.2 9l-.6 2.2 2.3-.6A6 6 0 1 0 12 6zm3.4 7.9c-.2-.1-1-.5-1.2-.5s-.3-.1-.4.1l-.5.6c-.1.1-.2.2-.4.1-.2-.1-.8-.3-1.5-1-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.4c.1-.1.1-.2.2-.3v-.3c0-.1-.4-1-.6-1.3-.1-.3-.3-.3-.4-.3h-.4c-.1 0-.3.1-.5.2-.2.2-.7.7-.7 1.7 0 1 .7 1.9.8 2.1.1.1 1.4 2.1 3.4 2.9.5.2.9.3 1.2.4.5.2 1 .1 1.3.1.4 0 1.1-.4 1.3-.9.2-.4.2-.8.1-.9-.1-.1-.2-.2-.4-.3z"/></svg>
+              </button>
+              <button type="button" class="share" aria-label="Copy link" onclick="navigator.clipboard &amp;&amp; navigator.clipboard.writeText(window.location.href)">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          {% if post.featured_image %}
+          <figure class="article-hero">
+            <img src="{{ post.featured_image.url }}"
+                 alt="{{ post.featured_image.alt_text or post.title }}"
+                 loading="eager" fetchpriority="high" />
+            {% if post.featured_image.caption %}
+              <figcaption>{{ post.featured_image.caption }}</figcaption>
+            {% endif %}
+          </figure>
+          {% endif %}
+
+          <div class="article-body">
+            {{ post.content|safe }}
+          </div>
+
+          {% if post.tags %}
+          <div class="tag-row" aria-label="Tags">
+            {% for t in post.tags %}
+              <span class="tag-chip">#{{ t.name }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="article-end">
+            <div class="end-rule" aria-hidden="true"></div>
+            <p>Published by the DSVV Newsroom</p>
+          </div>
+        </article>
+
+        <aside class="article-aside">
+          <section class="aside-widget">
+            <div class="aside-head">
+              <h2>Related Stories</h2>
+            </div>
+            {% if related_posts %}
+              <ul class="related-list">
+                {% for p in related_posts %}
+                <li>
+                  {% if p.featured_image %}
+                    <img src="{{ p.featured_image.url }}" alt="" loading="lazy" />
+                  {% endif %}
+                  <div>
+                    <p class="top-kicker">{{ p.category|replace('_',' ')|title }}</p>
+                    <a href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="empty">No related stories yet.</p>
+            {% endif %}
+          </section>
+
+          {% if top_stories %}
+          <section class="aside-widget">
+            <div class="aside-head">
+              <h2>Most Read</h2>
+            </div>
+            <ol class="top-stories compact">
+              {% for p in top_stories[:5] %}
+              <li>
+                <span class="top-num">{{ loop.index }}</span>
+                <div class="top-body">
+                  <a class="top-title" href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
+                </div>
+              </li>
+              {% endfor %}
+            </ol>
+          </section>
+          {% endif %}
+
+          <section class="aside-widget about-card">
+            <div class="aside-head">
+              <h2>About DSVV News</h2>
+            </div>
+            <p>The official newsroom of Dev Sanskriti Vishwavidyalaya — independent, accurate, and rooted on campus. From academics and research to campus culture, we cover the university as it happens.</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  {% include 'public/_footer.html' %}
+</body>
+</html>

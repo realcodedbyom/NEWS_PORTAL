@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{% if post %}Edit: {{ post.title }}{% else %}New post{% endif %}{% endblock %}
+{% block subheading %}
+  <p class="muted">{% if post %}Editing an existing post.{% else %}Start a new draft. It will stay private until submitted for review.{% endif %}</p>
+{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.posts_list') }}" class="btn btn-ghost">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<form method="POST" class="form form-grid"
+      action="{% if post %}{{ url_for('web.post_edit', post_id=post.id) }}{% else %}{{ url_for('web.post_new') }}{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+  <div class="form-main">
+    <label class="field">
+      <span>Title</span>
+      <input type="text" name="title" value="{{ form.title or '' }}" required maxlength="255" />
+    </label>
+
+    <label class="field">
+      <span>Subtitle</span>
+      <input type="text" name="subtitle" value="{{ form.subtitle or '' }}" maxlength="255" />
+    </label>
+
+    <label class="field">
+      <span>Excerpt</span>
+      <textarea name="excerpt" rows="2" maxlength="500">{{ form.excerpt or '' }}</textarea>
+    </label>
+
+    <label class="field">
+      <span>Content</span>
+      <textarea name="content" rows="18" required>{{ form.content or '' }}</textarea>
+    </label>
+  </div>
+
+  <aside class="form-side">
+    <div class="panel">
+      <h3>Publishing</h3>
+
+      <label class="field">
+        <span>Category</span>
+        <select name="category">
+          {% for c in categories %}
+            <option value="{{ c }}" {% if form.category == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Tags (comma separated)</span>
+        <input type="text" name="tags" value="{{ form.tags or '' }}" placeholder="e.g. convocation, culture" />
+      </label>
+
+      <label class="field">
+        <span>Publish at</span>
+        <input type="datetime-local" name="publish_at" value="{{ form.publish_at or '' }}" />
+      </label>
+
+      <label class="field">
+        <span>Expires at</span>
+        <input type="datetime-local" name="expires_at" value="{{ form.expires_at or '' }}" />
+      </label>
+
+      <fieldset class="checks">
+        <legend>Flags</legend>
+        <label><input type="checkbox" name="is_featured" {% if form.is_featured %}checked{% endif %} /> Featured</label>
+        <label><input type="checkbox" name="is_announcement" {% if form.is_announcement %}checked{% endif %} /> Announcement</label>
+        <label><input type="checkbox" name="is_pinned" {% if form.is_pinned %}checked{% endif %} /> Pinned</label>
+      </fieldset>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        {% if post %}Save changes{% else %}Create draft{% endif %}
+      </button>
+    </div>
+  </aside>
+</form>
+{% endblock %}

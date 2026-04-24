@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Alumni{% endblock %}
+{% block subheading %}<p class="muted">Alumni directory management.</p>{% endblock %}
+
+{% block actions %}
+  {% if current_user.has_role(RoleName.EDITOR.value) or current_user.has_role(RoleName.ADMIN.value) %}
+    <a href="{{ url_for('web.alumni_new') }}" class="btn btn-primary">Add alumni</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<form method="GET" action="{{ url_for('web.alumni_list') }}" class="filter-bar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Name, company, or location..." />
+  <input type="number" name="year" value="{{ year }}" placeholder="Grad year" min="1900" max="2100" />
+  <button type="submit" class="btn btn-secondary">Filter</button>
+</form>
+
+{% if alumni %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th><th>Year</th><th>Course</th><th>Current role</th><th>Location</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in alumni %}
+      <tr>
+        <td>
+          <strong>{{ a.name }}</strong>
+          {% if a.is_featured %}<span class="tag tag-accent">Featured</span>{% endif %}
+          <p class="row-meta muted">{{ a.email or '' }}</p>
+        </td>
+        <td>{{ a.graduation_year }}</td>
+        <td>{{ a.course }}</td>
+        <td>{{ a.current_role or '—' }}{% if a.company %} <span class="muted">@ {{ a.company }}</span>{% endif %}</td>
+        <td class="muted">{{ a.location or '—' }}</td>
+        <td class="col-actions">
+          {% if current_user.has_role(RoleName.EDITOR.value) or current_user.has_role(RoleName.ADMIN.value) %}
+            <a href="{{ url_for('web.alumni_edit', alumni_id=a.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <p class="empty">No alumni records match.</p>
+{% endif %}
+{% endblock %}
