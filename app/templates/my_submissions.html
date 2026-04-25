@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}My submissions{% endblock %}
+{% block subheading %}<p class="muted">All posts you&apos;ve created or submitted.</p>{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.public_submit') }}" class="btn btn-secondary">Submit news</a>
+  <a href="{{ url_for('web.post_new') }}" class="btn btn-primary">New draft</a>
+{% endblock %}
+
+{% block content %}
+{% if posts %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Category</th>
+        <th>Updated</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+          <p class="row-meta muted">
+            /{{ p.slug }}
+            {% if p.is_public_submission %}&middot; <span class="tag tag-accent">public</span>{% endif %}
+          </p>
+        </td>
+        <td><span class="tag status-{{ p.status }}">{{ p.status.replace('_', ' ') }}</span></td>
+        <td><span class="tag tag-neutral">{{ p.category }}</span></td>
+        <td class="muted">{{ p.updated_at.strftime('%b %d, %Y') }}</td>
+        <td class="col-actions">
+          {% if p.status in (PostStatus.DRAFT.value, PostStatus.REJECTED.value, PostStatus.REJECTED_PUBLIC.value, PostStatus.CHANGES_REQUIRED.value) %}
+            <a href="{{ url_for('web.post_edit', post_id=p.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+          {% else %}
+            <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="btn btn-ghost btn-sm">View</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <p class="empty">
+    You haven&apos;t submitted anything yet.
+    <br /><br />
+    <a class="btn btn-primary" href="{{ url_for('web.public_submit') }}">Submit your first story</a>
+  </p>
+{% endif %}
+{% endblock %}

@@ -88,3 +88,26 @@ class AlumniUpdateSchema(AlumniCreateSchema):
     name = fields.String(validate=validate.Length(min=2, max=150))
     graduation_year = fields.Integer(validate=validate.Range(min=1950, max=2100))
     course = fields.String(validate=validate.Length(max=150))
+
+
+# ---------- Public submission ----------
+
+class PublicSubmissionSchema(Schema):
+    """Used when the multipart form for /api/public/submit is parsed.
+
+    Images are handled separately in the controller (request.files); the
+    schema only covers the text fields.
+    """
+    title = fields.String(required=True, validate=validate.Length(min=3, max=255))
+    content = fields.String(required=True, validate=validate.Length(min=20))
+    subtitle = fields.String(allow_none=True, validate=validate.Length(max=255))
+    excerpt = fields.String(allow_none=True, validate=validate.Length(max=500))
+    category = fields.String(
+        load_default=PostCategory.NEWS.value,
+        validate=validate.OneOf([c.value for c in PostCategory]),
+    )
+    tags = fields.List(fields.String(), load_default=list)
+
+
+class ModerationNoteSchema(Schema):
+    note = fields.String(required=True, validate=validate.Length(min=1, max=1000))

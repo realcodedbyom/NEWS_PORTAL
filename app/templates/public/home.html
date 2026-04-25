@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#EE1C25" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
 </head>
@@ -23,7 +24,10 @@
           {% if featured_story %}
             {% if featured_story.featured_image %}
               <a class="hero-media" href="{{ url_for('web.news_detail', slug=featured_story.slug) }}">
-                <img src="{{ featured_story.featured_image.url }}"
+                <img src="{{ cld_url(featured_story.featured_image, width=1280, height=720) }}"
+                     srcset="{{ cld_srcset(featured_story.featured_image, ref_width=1280, ref_height=720) }}"
+                     sizes="{{ CLD_SIZES_HERO }}"
+                     width="1280" height="720"
                      alt="{{ featured_story.featured_image.alt_text or featured_story.title }}"
                      loading="eager" fetchpriority="high" />
               </a>
@@ -67,7 +71,10 @@
                   <a class="top-title" href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
                 </div>
                 {% if p.featured_image %}
-                  <img class="top-thumb" src="{{ p.featured_image.url }}" alt="" loading="lazy" />
+                  <img class="top-thumb"
+                       src="{{ cld_url(p.featured_image, width=120, height=80) }}"
+                       width="120" height="80"
+                       alt="" loading="lazy" decoding="async" />
                 {% endif %}
               </li>
               {% endfor %}
@@ -89,7 +96,11 @@
           <article class="news-card">
             {% if p.featured_image %}
               <a class="card-media" href="{{ url_for('web.news_detail', slug=p.slug) }}">
-                <img src="{{ p.featured_image.url }}" alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" />
+                <img src="{{ cld_url(p.featured_image, width=640, height=400) }}"
+                     srcset="{{ cld_srcset(p.featured_image, ref_width=640, ref_height=400) }}"
+                     sizes="{{ CLD_SIZES_CARD }}"
+                     width="640" height="400"
+                     alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" decoding="async" />
               </a>
             {% endif %}
             <div class="card-body">
@@ -121,7 +132,11 @@
             <article class="news-card">
               {% if p.featured_image %}
                 <a class="card-media" href="{{ url_for('web.news_detail', slug=p.slug) }}">
-                  <img src="{{ p.featured_image.url }}" alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" />
+                  <img src="{{ cld_url(p.featured_image, width=640, height=400) }}"
+                       srcset="{{ cld_srcset(p.featured_image, ref_width=640, ref_height=400) }}"
+                       sizes="{{ CLD_SIZES_CARD }}"
+                       width="640" height="400"
+                       alt="{{ p.featured_image.alt_text or p.title }}" loading="lazy" decoding="async" />
                 </a>
               {% endif %}
               <div class="card-body">

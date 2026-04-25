@@ -160,12 +160,128 @@ p { margin: 0 0 0.75rem 0; }
   font-size: 0.85rem;
   border: 1px solid var(--border);
 }
-.user-meta { display: flex; flex-direction: column; min-width: 0; }
+.user-meta { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .user-meta strong { font-size: 0.88rem; }
 .user-meta span {
   font-size: 0.75rem; color: var(--text-muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* ============================================================
+   Notification bell
+   ============================================================ */
+
+.bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.bell:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--primary);
+  text-decoration: none;
+}
+.bell-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: var(--surface);
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  line-height: 1;
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+/* ============================================================
+   Timeline (status history)
+   ============================================================ */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.timeline-item {
+  position: relative;
+  padding-left: 0.25rem;
+}
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -1.35rem;
+  top: 0.35rem;
+  width: 9px; height: 9px;
+  background: var(--primary);
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--border);
+}
+.timeline-item p { margin: 0 0 0.15rem 0; font-size: 0.85rem; }
+
+/* ============================================================
+   Notification inbox
+   ============================================================ */
+
+.notif-panel { padding: 0; }
+.notif-list { list-style: none; margin: 0; padding: 0; }
+.notif-row {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.notif-row:last-child { border-bottom: none; }
+.notif-row.is-unread { background: var(--primary-soft); }
+.notif-icon {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: var(--primary);
+  font-weight: 700;
+  border: 1px solid var(--border);
+}
+.notif-body { flex: 1; min-width: 0; }
+.notif-body p { margin: 0; font-size: 0.92rem; }
+.notif-time {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+  display: block;
+}
+.notif-actions { flex-shrink: 0; }
 
 .main {
   flex: 1;
@@ -441,10 +557,14 @@ input:focus, select:focus, textarea:focus {
 
 .status-draft             { background: var(--surface-2); color: var(--text-muted); }
 .status-review            { background: var(--warn-soft); color: var(--warn); border-color: #fde68a; }
+.status-pending_review    { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+.status-in_review         { background: var(--warn-soft); color: var(--warn); border-color: #fde68a; }
+.status-changes_required  { background: #ffedd5; color: var(--primary); border-color: #fed7aa; }
 .status-approved          { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
 .status-ready_to_publish  { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
 .status-published         { background: var(--accent-soft); color: var(--accent); border-color: #99f6e4; }
 .status-rejected          { background: var(--danger-soft); color: var(--danger); border-color: #fecaca; }
+.status-rejected_public   { background: var(--danger-soft); color: var(--danger); border-color: #fecaca; }
 .status-archived          { background: #f5f5f4; color: var(--text-muted); }
 
 /* ============================================================

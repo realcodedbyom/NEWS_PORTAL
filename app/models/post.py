@@ -11,6 +11,8 @@ from datetime import datetime
 from mongoengine import (
     CASCADE,
     Document,
+    EmbeddedDocument,
+    EmbeddedDocumentField,
     StringField,
     BooleanField,
     DateTimeField,
@@ -21,6 +23,40 @@ from mongoengine import (
 
 from ..utils.enums import PostStatus, PostCategory
 from .base import TimestampedDocument, ref_id as _ref_id
+
+
+class StatusHistoryEntry(EmbeddedDocument):
+    """One row in a Post's status_history log.
+
+    Unlike PostVersion (which snapshots full content), this keeps a
+    compact audit trail of workflow state changes for quick display.
+    """
+    status = StringField(required=True, max_length=30)
+    changed_by = ReferenceField("User")
+    changed_at = DateTimeField(default=datetime.utcnow, required=True)
+    note = StringField(max_length=500)
+
+    def to_dict(self) -> dict:
+        return {
+            "status": self.status,
+            "changed_by_id": str(self.changed_by.id) if self.changed_by else None,
+            "changed_at": self.changed_at.isoformat() if self.changed_at else None,
+            "note": self.note,
+        }
+
+
+class ModerationNote(EmbeddedDocument):
+    """Editor/admin feedback attached to a post during moderation."""
+    author = ReferenceField("User")
+    note = StringField(required=True, max_length=1000)
+    created_at = DateTimeField(default=datetime.utcnow, required=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "author_id": str(self.author.id) if self.author else None,
+            "note": self.note,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class Post(TimestampedDocument):
@@ -47,6 +83,11 @@ class Post(TimestampedDocument):
     is_announcement = BooleanField(default=False, required=True)
     is_pinned = BooleanField(default=False, required=True)
 
+    # Public submissions + moderation
+    is_public_submission = BooleanField(default=False, required=True)
+    moderation_notes = ListField(EmbeddedDocumentField(ModerationNote))
+    status_history = ListField(EmbeddedDocumentField(StatusHistoryEntry))
+
     # Scheduling
     publish_at = DateTimeField()
     published_at = DateTimeField()
@@ -71,12 +112,14 @@ class Post(TimestampedDocument):
             "is_featured",
             "is_pinned",
             "is_announcement",
+            "is_public_submission",
             "publish_at",
             "expires_at",
             "-published_at",
             "-created_at",
             "author",
             ("status", "category"),
+            ("status", "is_public_submission"),
         ],
     }
 
@@ -116,6 +159,9 @@ class Post(TimestampedDocument):
             "is_featured": bool(self.is_featured),
             "is_announcement": bool(self.is_announcement),
             "is_pinned": bool(self.is_pinned),
+            "is_public_submission": bool(self.is_public_submission),
+            "moderation_notes": [n.to_dict() for n in (self.moderation_notes or [])],
+            "status_history": [h.to_dict() for h in (self.status_history or [])],
             "publish_at": self.publish_at.isoformat() if self.publish_at else None,
             "published_at": self.published_at.isoformat() if self.published_at else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,

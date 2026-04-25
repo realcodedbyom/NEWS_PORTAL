@@ -1,7 +1,7 @@
 """
 Media routes.
 """
-from flask import Blueprint, send_from_directory, current_app
+from flask import Blueprint
 
 from ..controllers.media_controller import MediaController
 from ..utils.decorators import roles_required
@@ -32,9 +32,3 @@ def get_media(media_id: str):
 @roles_required(RoleName.EDITOR, RoleName.ADMIN)
 def delete_media(media_id: str):
     return MediaController.delete(media_id)
-
-
-# Local file serving — in production, serve via Nginx/S3 instead.
-@media_bp.get("/file/<path:filename>")
-def serve_file(filename: str):
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)

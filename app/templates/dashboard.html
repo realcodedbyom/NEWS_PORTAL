@@ -18,6 +18,15 @@
     <p class="stat-value">{{ summary.posts.in_review }}</p>
     <p class="stat-hint">Awaiting editor approval</p>
   </article>
+  {% if current_user.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value) %}
+  <article class="stat-card">
+    <p class="stat-label">Pending public</p>
+    <p class="stat-value">{{ public_queue_count }}</p>
+    <p class="stat-hint">
+      <a href="{{ url_for('web.public_queue') }}" class="link">Open queue &rarr;</a>
+    </p>
+  </article>
+  {% endif %}
   <article class="stat-card">
     <p class="stat-label">Scheduled</p>
     <p class="stat-value">{{ summary.posts.scheduled }}</p>
@@ -56,11 +65,11 @@
     {% endif %}
   </section>
 
-  {% if current_user.has_role(RoleName.EDITOR.value) or current_user.has_role(RoleName.ADMIN.value) %}
+  {% if current_user.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value) %}
   <section class="panel">
     <header class="panel-head">
       <h2>Review queue</h2>
-      <a href="{{ url_for('web.posts_list', status=PostStatus.REVIEW.value) }}" class="link">View all</a>
+      <a href="{{ url_for('web.review_queue') }}" class="link">View all</a>
     </header>
     {% if review_queue %}
       <ul class="row-list">
@@ -84,4 +93,56 @@
   </section>
   {% endif %}
 </div>
+
+{% if current_user.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value) and public_queue %}
+<section class="panel">
+  <header class="panel-head">
+    <h2>Public submissions</h2>
+    <a href="{{ url_for('web.public_queue') }}" class="link">View all</a>
+  </header>
+  <ul class="row-list">
+    {% for p in public_queue %}
+      <li class="row">
+        <div>
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+          <p class="row-meta">
+            <span class="tag tag-accent">public</span>
+            <span class="muted">by {{ p.author.name if p.author else 'Unknown' }}</span>
+            &middot;
+            <span class="muted">{{ p.created_at.strftime('%b %d, %H:%M') }}</span>
+          </p>
+        </div>
+        <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="btn btn-ghost btn-sm">Triage</a>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if recent_notifications %}
+<section class="panel">
+  <header class="panel-head">
+    <h2>Recent notifications</h2>
+    <a href="{{ url_for('web.notifications_list') }}" class="link">View all</a>
+  </header>
+  <ul class="row-list compact">
+    {% for n in recent_notifications %}
+      <li class="row">
+        <div>
+          <p class="row-title" style="font-weight: 500;">
+            {% if not n.is_read %}<span class="unread-dot" aria-label="unread"></span>{% endif %}
+            {{ n.message }}
+          </p>
+          <p class="row-meta muted">
+            {{ n.type.replace('_', ' ') }} &middot; {{ n.created_at.strftime('%b %d, %H:%M') }}
+          </p>
+        </div>
+        {% if n.post %}
+          <a href="{{ url_for('web.post_detail', post_id=n.post.id) }}" class="btn btn-ghost btn-sm">Open</a>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 {% endblock %}

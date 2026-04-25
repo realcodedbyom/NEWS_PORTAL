@@ -94,8 +94,14 @@ Drop screenshots into `docs/screenshots/` with the filenames below to have them 
 - Announcement / pinned / expiry flags
 - Tag auto-creation, featured image, photo gallery
 - Alumni directory with search
-- Media library with image/video/document types
+- Cloudinary-backed media library with responsive images (srcset + f_auto/q_auto)
 - Per-post analytics (views, referers)
+- Public **Submit News** page (`/submit`) — any registered user can contribute; rolling **5 submissions / 24h** anti-spam limit
+- Contributor dashboard at **`/my-submissions`** with live status tracking
+- Dedicated moderation queues: **`/cms/public-queue`** (triage) and **`/cms/review-queue`** (internal review)
+- Moderation notes and a per-post **status history** timeline visible on every article
+- In-app **notification system** — bell + inbox (`/cms/notifications`) driven by workflow events (submission received, changes required, approved, published, rejected, archived)
+- **Multipart `images[]`** upload on post create / public submit — batch Cloudinary upload with automatic rollback on partial failure
 
 ### Developer experience
 - Flask application factory + blueprints
@@ -115,7 +121,7 @@ Drop screenshots into `docs/screenshots/` with the filenames below to have them 
 | Validation | Marshmallow |
 | Templating | Jinja2 |
 | Scheduling | APScheduler (background) |
-| Images | Pillow |
+| Images | Cloudinary (storage + CDN) · Pillow |
 | Production server | Gunicorn |
 
 ## Project Structure
@@ -165,14 +171,19 @@ Pick one. Full instructions in [`SETUP.md`](./SETUP.md).
 - **Windows local:** install MongoDB Community Server → `net start MongoDB`.
 - **Docker:** `docker run -d --name dsvv-mongo -p 27017:27017 -v dsvv_mongo_data:/data/db mongo:7`
 
-### 3. Configure env
+### 3. Create a Cloudinary account
+
+All image uploads go to Cloudinary. Sign up for the free tier at <https://cloudinary.com/users/register/free> and copy your *Cloud name*, *API Key*, and *API Secret* from the Dashboard.
+
+### 4. Configure env
 
 ```powershell
 copy .env.example .env
-# edit .env and set MONGODB_HOST, SECRET_KEY, JWT_SECRET_KEY
+# edit .env and set MONGODB_HOST, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY,
+# CLOUDINARY_API_SECRET, SECRET_KEY, JWT_SECRET_KEY
 ```
 
-### 4. Seed & run
+### 5. Seed & run
 
 ```powershell
 python scripts/seed.py
@@ -203,9 +214,12 @@ All config reads from environment variables (via `python-dotenv`). The full list
 : `JWT_ACCESS_TOKEN_EXPIRES_MIN` — access-token TTL in minutes (default: `60`)
 : `JWT_REFRESH_TOKEN_EXPIRES_DAYS` — refresh-token TTL in days (default: `14`)
 
-**Media uploads**
-: `UPLOAD_FOLDER` — local upload path (default: `./uploads`)
-: `MAX_CONTENT_LENGTH_MB` — max request body size in MB (default: `25`)
+**Cloudinary (required)**
+: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — from your [Cloudinary Dashboard](https://cloudinary.com/console). The app will refuse to start without these.
+: `CLOUDINARY_UPLOAD_FOLDER` — folder inside your Cloudinary account (default: `dsvv_news`)
+
+**Media**
+: `MAX_CONTENT_LENGTH_MB` — max request body size in MB (default: `25`). Note: uploads stream through Flask to Cloudinary, so this caps the relay size.
 
 **CORS**
 : `CORS_ORIGINS` — comma-separated list of allowed origins
@@ -226,8 +240,13 @@ See [`.env.example`](./.env.example) for a copy-pasteable template.
 | `/` and `/news` | Public homepage (News18-style) |
 | `/news/category/<slug>` | Category landing page |
 | `/news/<slug>` | Public article detail |
+| `/submit` | Public submission form (login required) |
 | `/login` · `/logout` | CMS sign-in / sign-out |
 | `/dashboard` | Newsroom dashboard (requires login) |
+| `/my-submissions` | Contributor dashboard — your submissions + statuses |
+| `/cms/notifications` | Notification inbox (bell) |
+| `/cms/public-queue` | Public-submission triage (editor/admin) |
+| `/cms/review-queue` | Internal review queue (editor/admin) |
 | `/posts` · `/posts/new` · `/posts/<id>/edit` | Article admin |
 | `/alumni` · `/alumni/new` | Alumni directory admin |
 | `/media` | Media library |
@@ -239,11 +258,20 @@ See [`.env.example`](./.env.example) for a copy-pasteable template.
 
 Posts flow through a state machine enforced by `app/utils/enums.py::ALLOWED_TRANSITIONS`:
 
+```text
+Internal (writer starts in CMS)
+  draft ──► in_review ──► approved ──► ready_to_publish ──► published ──► archived
+              │  │
+              │  └─► changes_required ──► draft
+              └─► rejected
+
+Public (contributor submits via /submit)
+  pending_review ──► in_review ──► approved ──► ready_to_publish ──► published
+         │
+         └─► rejected_public
 ```
-draft  →  review  →  approved  →  ready_to_publish  →  published
-  ↑         ↓           ↓                                  ↓
-  └──── rejected        └──────── (back to draft)       archived
-```
+
+> Legacy `review` and `rejected` values are retained as synonyms for backward compatibility with older posts. Every transition appends an entry to the post's `status_history[]` (who changed what, when). Editing a published post creates a new `PostVersion` snapshot — it does not automatically reset the status.
 
 | Role | Can do |
 | --- | --- |
@@ -298,7 +326,26 @@ curl -X POST http://localhost:8000/api/posts \
   -d '{"title":"Hello","content":"<p>World</p>","category":"news"}'
 ```
 
-Main blueprints: `auth`, `posts`, `users`, `media`, `alumni`, `analytics`, `health`. See `app/routes/` for the full surface.
+Main blueprints: `auth`, `posts`, `users`, `media`, `alumni`, `analytics`, `notifications`, `health`.
+
+### CMS extension endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/public/submit` | Public submission (multipart: `title`, `content`, `images[]`) — enforces 5/24h rate limit |
+| `POST` | `/api/posts` | Create post (now multipart-aware: accepts `images[]` alongside JSON fields) |
+| `GET` | `/api/posts/mine` | Posts authored by the current user |
+| `GET` | `/api/posts/queue/public` | Triage queue — posts in `pending_review` (editor/admin) |
+| `GET` | `/api/posts/queue/review` | Review queue — posts in `in_review` (editor/admin) |
+| `POST` | `/api/posts/<id>/notes` | Add a moderation note to a post |
+| `GET` | `/api/notifications` | Current user's notifications (supports `?unread=1`) |
+| `GET` | `/api/notifications/unread-count` | Unread badge counter |
+| `PATCH` | `/api/notifications/<id>/read` | Mark a single notification as read |
+| `POST` | `/api/notifications/read-all` | Mark all notifications as read |
+
+Uploads accept up to **10 images** per request (`jpg`, `jpeg`, `png`, `gif`, `webp`). Images are uploaded to Cloudinary in one batch; if any image fails, already-uploaded assets are rolled back before the request returns 4xx.
+
+See `app/routes/` for the full surface.
 
 ## Seed Data
 
@@ -352,8 +399,7 @@ Production checklist:
 - [ ] Point `MONGODB_HOST` at a managed cluster (Atlas or self-hosted replica set)
 - [ ] `SESSION_COOKIE_SECURE=true` and serve behind HTTPS
 - [ ] Restrict `CORS_ORIGINS` to your real domains
-- [ ] Put Nginx / a CDN in front for static + uploads
-- [ ] Move `UPLOAD_FOLDER` to object storage (S3/GCS) or a persistent volume
+- [ ] Confirm Cloudinary credentials are set and not committed to git
 - [ ] Set `FLASK_CONFIG=production`
 
 ## Troubleshooting
@@ -366,6 +412,8 @@ Production checklist:
 | `CSRF token missing` on admin forms | Ensure the `base.html` form includes `{{ form.csrf_token }}` (or the hidden `csrf_token` input), and don't open the form in a second tab after the session expired. |
 | JWT 401 on valid-looking request | Access token lifetime is 60 min by default. Hit `/api/auth/refresh` with the refresh token. |
 | Can't publish a draft | Check `ALLOWED_TRANSITIONS` and your role — only admins can move `ready_to_publish → published`. |
+| `RuntimeError: Cloudinary is required` | Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in `.env`. See [SETUP.md](./SETUP.md#2-sign-up-for-cloudinary). |
+| `Submission limit reached (5 per 24 hours)` (HTTP 400) | Anti-spam cap: max 5 public submissions per user per rolling 24h window. Wait or submit as an editor/admin. |
 
 ## Acknowledgements
 

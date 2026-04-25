@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#EE1C25" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
 </head>
@@ -63,7 +64,10 @@
 
           {% if post.featured_image %}
           <figure class="article-hero">
-            <img src="{{ post.featured_image.url }}"
+            <img src="{{ cld_url(post.featured_image, width=1200, height=675) }}"
+                 srcset="{{ cld_srcset(post.featured_image, ref_width=1200, ref_height=675) }}"
+                 sizes="{{ CLD_SIZES_HERO }}"
+                 width="1200" height="675"
                  alt="{{ post.featured_image.alt_text or post.title }}"
                  loading="eager" fetchpriority="high" />
             {% if post.featured_image.caption %}
@@ -100,7 +104,9 @@
                 {% for p in related_posts %}
                 <li>
                   {% if p.featured_image %}
-                    <img src="{{ p.featured_image.url }}" alt="" loading="lazy" />
+                    <img src="{{ cld_url(p.featured_image, width=120, height=80) }}"
+                         width="120" height="80"
+                         alt="" loading="lazy" decoding="async" />
                   {% endif %}
                   <div>
                     <p class="top-kicker">{{ p.category|replace('_',' ')|title }}</p>

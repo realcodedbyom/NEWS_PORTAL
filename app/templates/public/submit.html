@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Submit news{% endblock %}
+{% block subheading %}<p class="muted">Share a story with DSVV. Our editors will review before publishing.</p>{% endblock %}
+
+{% block actions %}
+  <a href="{{ url_for('web.my_submissions') }}" class="btn btn-secondary">My submissions</a>
+{% endblock %}
+
+{% block content %}
+<div class="form-grid">
+  <form method="POST" action="{{ url_for('web.public_submit') }}"
+        enctype="multipart/form-data" class="panel form form-main">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <label class="field">
+      <span>Title</span>
+      <input type="text" name="title" required maxlength="255" value="{{ form.title or '' }}" />
+    </label>
+
+    <label class="field">
+      <span>Subtitle (optional)</span>
+      <input type="text" name="subtitle" maxlength="255" value="{{ form.subtitle or '' }}" />
+    </label>
+
+    <label class="field">
+      <span>Category</span>
+      <select name="category">
+        {% for c in PostCategory.values() %}
+          <option value="{{ c }}" {% if form.category == c %}selected{% endif %}>{{ c.replace('_', ' ') }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Story (min. 20 characters)</span>
+      <textarea name="content" rows="12" required minlength="20">{{ form.content or '' }}</textarea>
+    </label>
+
+    <label class="field">
+      <span>Excerpt (optional)</span>
+      <textarea name="excerpt" rows="2" maxlength="500">{{ form.excerpt or '' }}</textarea>
+    </label>
+
+    <label class="field">
+      <span>Tags (comma-separated)</span>
+      <input type="text" name="tags" value="{{ form.tags or '' }}" placeholder="yoga, alumni, event" />
+    </label>
+
+    <label class="field">
+      <span>Images (up to 10)</span>
+      <input type="file" name="images" multiple accept="image/png,image/jpeg,image/webp,image/gif" />
+      <small class="muted">First image becomes the featured image. JPG, PNG, WebP, or GIF.</small>
+    </label>
+
+    <button type="submit" class="btn btn-primary">Submit for review</button>
+  </form>
+
+  <aside class="form-side">
+    <section class="panel">
+      <h3>How it works</h3>
+      <ol class="muted small" style="padding-left: 1.1rem; line-height: 1.7;">
+        <li>Your submission is sent to our editors for review.</li>
+        <li>Editors may request changes or approve it for publishing.</li>
+        <li>Once published, it appears on the DSVV news site.</li>
+      </ol>
+    </section>
+    <section class="panel">
+      <h3>Guidelines</h3>
+      <ul class="muted small" style="padding-left: 1.1rem; line-height: 1.7;">
+        <li>Original reporting or firsthand accounts preferred.</li>
+        <li>Cite sources for any quoted material.</li>
+        <li>Max 5 submissions per 24 hours.</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

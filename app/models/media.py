@@ -1,6 +1,7 @@
 """
-Media library. Files live on disk/S3; DB stores metadata so they can
-be reused across posts.
+Media library. Files are hosted on Cloudinary; the DB stores metadata
+(including the Cloudinary public_id) so assets can be reused across
+posts and deleted from Cloudinary when removed.
 """
 from mongoengine import (
     StringField,
@@ -27,11 +28,16 @@ class Media(TimestampedDocument):
     alt_text = StringField(max_length=255)
     caption = StringField(max_length=500)
 
+    # Storage backend metadata
+    provider = StringField(required=True, default="cloudinary", max_length=30)
+    public_id = StringField(max_length=300)  # Cloudinary public_id
+    folder = StringField(max_length=200)
+
     uploaded_by = ReferenceField("User")
 
     meta = {
         "collection": "media",
-        "indexes": ["-created_at", "media_type"],
+        "indexes": ["-created_at", "media_type", "public_id"],
     }
 
     @property
@@ -51,6 +57,9 @@ class Media(TimestampedDocument):
             "height": self.height,
             "alt_text": self.alt_text,
             "caption": self.caption,
+            "provider": self.provider,
+            "public_id": self.public_id,
+            "folder": self.folder,
             "uploaded_by_id": self.uploaded_by_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -39,21 +39,41 @@ server-rendered admin UI and a JWT-protected JSON API in the same app.
 docker run -d --name dsvv-mongo -p 27017:27017 -v dsvv_mongo_data:/data/db mongo:7
 ```
 
-## 2. Install the app
+## 2. Sign up for Cloudinary
+
+All image and video uploads are stored on **Cloudinary**. The free tier (25 GB storage, 25 GB bandwidth/month) is more than enough for development and small production deployments.
+
+1. Sign up at <https://cloudinary.com/users/register/free>.
+2. After sign-in, open the **Dashboard** (https://cloudinary.com/console) and copy the three values from *Account Details*:
+   - `Cloud name`
+   - `API Key`
+   - `API Secret`
+3. Paste them into `.env`:
+   ```
+   CLOUDINARY_CLOUD_NAME=your-cloud-name
+   CLOUDINARY_API_KEY=123456789012345
+   CLOUDINARY_API_SECRET=abcdefghijklmnopqrstuvwxyz0123
+   CLOUDINARY_UPLOAD_FOLDER=dsvv_news
+   ```
+
+The app **will refuse to start** if these three values are missing — Cloudinary is the sole storage backend.
+
+## 3. Install the app
 
 ```powershell
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-# edit .env and set MONGODB_HOST (and SECRET_KEY / JWT_SECRET_KEY for real deployments)
+# edit .env and set MONGODB_HOST + CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET
+# (and SECRET_KEY / JWT_SECRET_KEY for real deployments)
 python scripts/seed.py
 python run.py
 ```
 
-The dev server binds to <http://localhost:5000>.
+The dev server binds to <http://localhost:8000>.
 
-## 3. Default login
+## 4. Default login
 
 The seed script creates three roles (`writer`, `editor`, `admin`) and one admin:
 

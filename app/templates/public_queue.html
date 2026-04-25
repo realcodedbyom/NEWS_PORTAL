@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Public submissions{% endblock %}
+{% block subheading %}<p class="muted">Submissions from public contributors awaiting triage.</p>{% endblock %}
+
+{% block content %}
+{% if posts %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Author</th>
+        <th>Submitted</th>
+        <th>Images</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+          <p class="row-meta muted">
+            <span class="tag status-{{ p.status }}">{{ p.status.replace('_', ' ') }}</span>
+            <span class="tag tag-accent">public</span>
+          </p>
+        </td>
+        <td><span class="tag tag-neutral">{{ p.category }}</span></td>
+        <td>{{ p.author.name if p.author else '&mdash;' }}<br /><span class="muted small">{{ p.author.email if p.author else '' }}</span></td>
+        <td class="muted">{{ p.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+        <td class="muted">
+          {% set imgs = (1 if p.featured_image else 0) + (p.gallery|length if p.gallery else 0) %}
+          {{ imgs }} image{{ '' if imgs == 1 else 's' }}
+        </td>
+        <td class="col-actions">
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="btn btn-ghost btn-sm">Review</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <p class="empty">No public submissions are awaiting review.</p>
+{% endif %}
+{% endblock %}

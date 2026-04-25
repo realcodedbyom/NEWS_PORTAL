@@ -98,3 +98,30 @@ def transition(post_id: str):
 @roles_required(RoleName.WRITER, RoleName.EDITOR, RoleName.ADMIN)
 def versions(post_id: str):
     return PostController.list_versions(post_id)
+
+
+# ---------- My submissions ----------
+@posts_bp.get("/mine")
+@roles_required(RoleName.WRITER, RoleName.EDITOR, RoleName.ADMIN)
+def list_mine():
+    return PostController.list_mine()
+
+
+# ---------- Moderation queues ----------
+@posts_bp.get("/queue/public")
+@roles_required(RoleName.EDITOR, RoleName.ADMIN)
+def list_public_queue():
+    return PostController.list_public_queue()
+
+
+@posts_bp.get("/queue/review")
+@roles_required(RoleName.EDITOR, RoleName.ADMIN)
+def list_review_queue():
+    return PostController.list_review_queue()
+
+
+# ---------- Moderation notes ----------
+@posts_bp.post("/<string:post_id>/notes")
+@roles_required(RoleName.EDITOR, RoleName.ADMIN)
+def add_moderation_note(post_id: str):
+    return PostController.add_moderation_note(post_id)

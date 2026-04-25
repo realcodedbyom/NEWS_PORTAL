@@ -7,14 +7,22 @@ error handlers, and the background scheduler.
 from __future__ import annotations
 
 import logging
-import os
 
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from werkzeug.exceptions import HTTPException
 
 from .config import get_config
-from .extensions import jwt, cors, csrf, scheduler, revoked_tokens, init_db
+from .extensions import (
+    jwt,
+    cors,
+    csrf,
+    scheduler,
+    revoked_tokens,
+    init_db,
+    init_cloudinary,
+)
+from .utils.cloudinary_helpers import register_jinja_helpers
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -23,13 +31,11 @@ def create_app(config_name: str | None = None) -> Flask:
 
     _configure_logging(app)
     _init_extensions(app)
+    register_jinja_helpers(app)
     _register_blueprints(app)
     _register_error_handlers(app)
     _register_jwt_callbacks(jwt)
     _start_scheduler(app)
-
-    # Ensure upload folder exists
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
     return app
 
@@ -41,10 +47,31 @@ def _configure_logging(app: Flask) -> None:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
+    # Silence noisy third-party loggers even in DEBUG mode. The pymongo
+    # topology monitor emits a full ismaster reply per replica node every
+    # ~10 seconds, which floods the console when running against Atlas.
+    _NOISY_LOGGERS = (
+        "pymongo",
+        "pymongo.topology",
+        "pymongo.serverSelection",
+        "pymongo.command",
+        "pymongo.connection",
+        "pymongo.heartbeat",
+        "apscheduler",
+        "apscheduler.scheduler",
+        "apscheduler.executors.default",
+        "urllib3",
+    )
+    for name in _NOISY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
+
 
 def _init_extensions(app: Flask) -> None:
     # Connect MongoDB first so models register against a live connection.
     init_db(app)
+
+    # Configure Cloudinary (fail-fast if credentials are missing).
+    init_cloudinary(app)
 
     jwt.init_app(app)
     cors.init_app(
@@ -69,6 +96,9 @@ def _register_blueprints(app: Flask) -> None:
     from .routes.analytics import analytics_bp
     from .routes.health import health_bp
     from .routes.web import web_bp
+    from .routes.notifications import notifications_bp
+    from .routes.public import public_bp
+    from .routes.my_posts import my_posts_bp
 
     # JSON API blueprints (JWT-protected, CSRF-exempt)
     for bp, prefix in [
@@ -79,6 +109,9 @@ def _register_blueprints(app: Flask) -> None:
         (media_bp, "/api/media"),
         (users_bp, "/api/users"),
         (analytics_bp, "/api/analytics"),
+        (notifications_bp, "/api/notifications"),
+        (public_bp, "/api/public"),
+        (my_posts_bp, "/api/my-posts"),
     ]:
         csrf.exempt(bp)
         app.register_blueprint(bp, url_prefix=prefix)

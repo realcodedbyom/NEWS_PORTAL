@@ -21,8 +21,6 @@ from flask import (
     flash,
     g,
     abort,
-    send_from_directory,
-    current_app,
 )
 from mongoengine import Q
 from mongoengine.errors import ValidationError as MEValidationError
@@ -32,10 +30,12 @@ from ..models.role import Role
 from ..models.post import Post, PostVersion
 from ..models.alumni import Alumni
 from ..models.media import Media
+from ..models.notification import Notification
 from ..services.post_service import PostService
 from ..services.alumni_service import AlumniService
 from ..services.media_service import MediaService
 from ..services.analytics_service import AnalyticsService
+from ..services.notification_service import NotificationService
 from ..utils.enums import PostStatus, PostCategory, RoleName, ALLOWED_TRANSITIONS
 from ..utils.exceptions import AppException
 
@@ -99,12 +99,17 @@ def roles_required(*role_names: str):
 
 @web_bp.app_context_processor
 def _inject_globals():
+    user = _current_user()
+    # Cheap unread-count query so the bell badge stays in sync without
+    # every view having to pass it explicitly.
+    unread = NotificationService.unread_count(user) if user else 0
     return {
-        "current_user": _current_user(),
+        "current_user": user,
         "now": datetime.utcnow(),
         "PostStatus": PostStatus,
         "PostCategory": PostCategory,
         "RoleName": RoleName,
+        "unread_notifications_count": unread,
     }
 
 
@@ -237,12 +242,6 @@ def news_detail(slug: str):
     )
 
 
-@web_bp.route("/uploads/<path:filename>")
-def uploaded_file(filename: str):
-    """Serve uploaded media from the configured UPLOAD_FOLDER."""
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
-
-
 # ---------- Auth routes ----------
 
 @web_bp.route("/login", methods=["GET", "POST"])
@@ -279,6 +278,36 @@ def logout():
 
 # ---------- Dashboard ----------
 
+def _dashboard_extras_for_staff(user: User) -> tuple[list, list, int]:
+    """Return (review_queue, public_queue, public_queue_count) for editors/admins.
+
+    Non-staff users get empty lists and a zero count; keeps the dashboard
+    view tidy without branching inside the template.
+    """
+    if not user.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value):
+        return [], [], 0
+    review_queue = list(
+        Post.objects.filter(
+            Q(status=PostStatus.REVIEW.value) | Q(status=PostStatus.IN_REVIEW.value)
+        )
+        .order_by("-updated_at")
+        .limit(8)
+    )
+    public_queue = list(
+        Post.objects(
+            status=PostStatus.PENDING_REVIEW.value,
+            is_public_submission=True,
+        )
+        .order_by("-created_at")
+        .limit(8)
+    )
+    public_queue_count = Post.objects(
+        status=PostStatus.PENDING_REVIEW.value,
+        is_public_submission=True,
+    ).count()
+    return review_queue, public_queue, public_queue_count
+
+
 @web_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -287,18 +316,18 @@ def dashboard():
     my_drafts = list(
         Post.objects(author=user).order_by("-updated_at").limit(5)
     )
-    review_queue = []
-    if user.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value):
-        review_queue = list(
-            Post.objects(status=PostStatus.REVIEW.value)
-            .order_by("-updated_at")
-            .limit(8)
-        )
+    review_queue, public_queue, public_queue_count = _dashboard_extras_for_staff(user)
+    recent_notifications = list(
+        NotificationService.list_for(user).limit(5)
+    )
     return render_template(
         "dashboard.html",
         summary=summary,
         my_drafts=my_drafts,
         review_queue=review_queue,
+        public_queue=public_queue,
+        public_queue_count=public_queue_count,
+        recent_notifications=recent_notifications,
     )
 
 
@@ -410,6 +439,24 @@ def post_edit(post_id: str):
         "expires_at": post.expires_at.strftime("%Y-%m-%dT%H:%M") if post.expires_at else "",
     }
     return render_template("posts/form.html", post=post, form=form, categories=PostCategory.values())
+
+
+@web_bp.route("/posts/<string:post_id>/moderation-note", methods=["POST"])
+@login_required
+@roles_required(RoleName.EDITOR.value, RoleName.ADMIN.value)
+def post_moderation_note(post_id: str):
+    post = _get_or_404(Post, post_id)
+    note = (request.form.get("note") or "").strip()
+    if not note:
+        flash("Note cannot be empty.", "error")
+        return redirect(url_for("web.post_detail", post_id=post_id))
+    try:
+        PostService.add_moderation_note(post, _current_user(), note)
+    except AppException as exc:
+        flash(exc.message, "error")
+        return redirect(url_for("web.post_detail", post_id=post_id))
+    flash("Moderation note added.", "success")
+    return redirect(url_for("web.post_detail", post_id=post_id))
 
 
 @web_bp.route("/posts/<string:post_id>/transition", methods=["POST"])
@@ -591,6 +638,140 @@ def media_delete(media_id: str):
     MediaService.delete(item)
     flash("Media removed.", "success")
     return redirect(url_for("web.media_list"))
+
+
+# ---------- Notifications ----------
+
+@web_bp.route("/cms/notifications")
+@login_required
+def notifications_list():
+    user = _current_user()
+    notifications = list(NotificationService.list_for(user).limit(100))
+    return render_template("notifications.html", notifications=notifications)
+
+
+@web_bp.route("/cms/notifications/<string:notification_id>/read", methods=["POST"])
+@login_required
+def notification_mark_read(notification_id: str):
+    notification = _get_or_404(Notification, notification_id)
+    try:
+        NotificationService.mark_read(notification, _current_user())
+    except AppException as exc:
+        flash(exc.message, "error")
+        return redirect(url_for("web.notifications_list"))
+    # If the notification points at a post, deep-link to it.
+    if notification.post:
+        return redirect(url_for("web.post_detail", post_id=str(notification.post.id)))
+    return redirect(url_for("web.notifications_list"))
+
+
+@web_bp.route("/cms/notifications/read-all", methods=["POST"])
+@login_required
+def notifications_read_all():
+    NotificationService.mark_all_read(_current_user())
+    flash("All notifications marked as read.", "success")
+    return redirect(url_for("web.notifications_list"))
+
+
+# ---------- Public submissions queue (editors/admins) ----------
+
+@web_bp.route("/cms/public-queue")
+@login_required
+@roles_required(RoleName.EDITOR.value, RoleName.ADMIN.value)
+def public_queue():
+    posts = list(
+        Post.objects(
+            status=PostStatus.PENDING_REVIEW.value,
+            is_public_submission=True,
+        )
+        .order_by("-created_at")
+        .limit(100)
+    )
+    return render_template("public_queue.html", posts=posts)
+
+
+# ---------- Internal review queue (editors/admins) ----------
+
+@web_bp.route("/cms/review-queue")
+@login_required
+@roles_required(RoleName.EDITOR.value, RoleName.ADMIN.value)
+def review_queue():
+    posts = list(
+        Post.objects.filter(
+            Q(status=PostStatus.IN_REVIEW.value) | Q(status=PostStatus.REVIEW.value)
+        )
+        .order_by("-updated_at", "-created_at")
+        .limit(100)
+    )
+    return render_template("review_queue.html", posts=posts)
+
+
+# ---------- My submissions (writer dashboard) ----------
+
+@web_bp.route("/my-submissions")
+@login_required
+def my_submissions():
+    posts = list(
+        Post.objects(author=_current_user())
+        .order_by("-updated_at")
+        .limit(200)
+    )
+    return render_template("my_submissions.html", posts=posts)
+
+
+# ---------- Public submit form (any logged-in user) ----------
+
+@web_bp.route("/submit", methods=["GET", "POST"])
+@web_bp.route("/news/submit", methods=["GET", "POST"])
+@login_required
+def public_submit():
+    user = _current_user()
+    if request.method == "POST":
+        form = {
+            "title": (request.form.get("title") or "").strip(),
+            "subtitle": (request.form.get("subtitle") or "").strip() or None,
+            "content": request.form.get("content") or "",
+            "excerpt": (request.form.get("excerpt") or "").strip() or None,
+            "category": (request.form.get("category") or PostCategory.NEWS.value).strip(),
+            "tags": [
+                t.strip() for t in (request.form.get("tags") or "").split(",") if t.strip()
+            ],
+        }
+
+        # Pre-flight rate-limit check BEFORE uploading images so we don't
+        # burn Cloudinary uploads on requests that will be rejected anyway.
+        try:
+            PostService.check_daily_submission_limit(user)
+        except AppException as exc:
+            flash(exc.message, "error")
+            return render_template("public/submit.html", form=form), exc.status_code
+
+        # Upload any attached images first (up to 10).
+        files = [f for f in request.files.getlist("images") if f and f.filename]
+        images = []
+        if files:
+            try:
+                images = MediaService.upload_many(files, user, max_count=10)
+            except AppException as exc:
+                flash(exc.message, "error")
+                return render_template("public/submit.html", form=form), exc.status_code
+
+        try:
+            post = PostService.submit_public(form, user, images=images)
+        except AppException as exc:
+            # Roll back any uploaded media so we don't orphan assets.
+            for m in images:
+                try:
+                    MediaService.delete(m)
+                except Exception:
+                    pass
+            flash(exc.message, "error")
+            return render_template("public/submit.html", form=form), exc.status_code
+
+        flash("Thanks! Your submission is now pending review.", "success")
+        return redirect(url_for("web.my_submissions"))
+
+    return render_template("public/submit.html", form={})
 
 
 # ---------- Users (admin only) ----------

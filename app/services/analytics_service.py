@@ -48,7 +48,14 @@ class AnalyticsService:
 
         total_posts = Post.objects.count()
         published = Post.objects(status=PostStatus.PUBLISHED.value).count()
-        in_review = Post.objects(status=PostStatus.REVIEW.value).count()
+        # Count both legacy REVIEW and the new IN_REVIEW together.
+        in_review = Post.objects(
+            status__in=[PostStatus.REVIEW.value, PostStatus.IN_REVIEW.value]
+        ).count()
+        pending_public = Post.objects(
+            status=PostStatus.PENDING_REVIEW.value,
+            is_public_submission=True,
+        ).count()
         scheduled = Post.objects(
             status=PostStatus.READY_TO_PUBLISH.value,
             publish_at__ne=None,
@@ -63,6 +70,7 @@ class AnalyticsService:
                 "total": total_posts,
                 "published": published,
                 "in_review": in_review,
+                "pending_public": pending_public,
                 "scheduled": scheduled,
             },
             "views": {"total": total_views, "last_7_days": weekly_views},

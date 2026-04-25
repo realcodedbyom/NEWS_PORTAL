@@ -1,11 +1,12 @@
 """
-Post service: CRUD, workflow transitions, versioning, listings.
+Post service: CRUD, workflow transitions, versioning, listings,
+public submissions, moderation notes, and notification hooks.
 
 All write operations create a PostVersion snapshot so nothing is lost.
 Workflow enforcement lives in `transition_status` and uses the
 ALLOWED_TRANSITIONS map as the single source of truth.
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from bson import ObjectId
@@ -13,13 +14,23 @@ from bson.errors import InvalidId
 from mongoengine import Q
 from mongoengine.errors import ValidationError as MEValidationError
 
-from ..models.post import Post, PostVersion
+from ..models.post import (
+    Post,
+    PostVersion,
+    StatusHistoryEntry,
+    ModerationNote,
+)
 from ..models.tag import Tag
 from ..models.media import Media
 from ..models.user import User
-from ..utils.enums import PostStatus, RoleName, ALLOWED_TRANSITIONS
+from ..utils.enums import PostStatus, PostCategory, RoleName, ALLOWED_TRANSITIONS
 from ..utils.exceptions import NotFound, Forbidden, WorkflowError, BadRequest
 from ..utils.slug import generate_unique_slug
+from .notification_service import NotificationService
+
+
+# Anti-spam: maximum public submissions per rolling 24h window per user.
+DAILY_PUBLIC_SUBMISSION_LIMIT = 5
 
 
 def _resolve_media(ref_id):
@@ -61,6 +72,54 @@ class PostService:
         PostService._snapshot(post, author, note="Created")
         return post
 
+    # ---------- Public submission ----------
+    @staticmethod
+    def submit_public(
+        data: dict,
+        author: User,
+        images: list[Media] | None = None,
+    ) -> Post:
+        """Create a post from a public contributor.
+
+        - Applies rolling-24h rate limit (DAILY_PUBLIC_SUBMISSION_LIMIT).
+        - Marks is_public_submission=True and status=PENDING_REVIEW.
+        - First image (if any) becomes featured_image; the rest go to gallery.
+        - Increments author.submission_count atomically.
+        - Fires the notification hook for PENDING_REVIEW.
+        """
+        PostService._enforce_daily_submission_limit(author)
+
+        images = [m for m in (images or []) if m]
+        featured_image = images[0] if images else None
+        gallery_images = list(images[1:]) if len(images) > 1 else []
+
+        slug_source = data.get("slug") or data["title"]
+        post = Post(
+            title=data["title"].strip(),
+            subtitle=data.get("subtitle"),
+            slug=generate_unique_slug(slug_source, Post),
+            content=data["content"],
+            excerpt=data.get("excerpt"),
+            category=data.get("category", PostCategory.NEWS.value),
+            status=PostStatus.PENDING_REVIEW.value,
+            is_public_submission=True,
+            author=author,
+            featured_image=featured_image,
+            gallery=gallery_images,
+        )
+        PostService._attach_tags(post, data.get("tags", []))
+        post.save()
+
+        # Bump the submitter's counter atomically and mirror in-memory.
+        User.objects(id=author.id).update_one(inc__submission_count=1)
+        author.submission_count = (author.submission_count or 0) + 1
+
+        PostService._snapshot(post, author, note="Public submission received")
+        NotificationService.dispatch_status_change(
+            post, PostStatus.PENDING_REVIEW.value, author
+        )
+        return post
+
     # ---------- Update ----------
     @staticmethod
     def update(post: Post, data: dict, actor: User) -> Post:
@@ -98,6 +157,22 @@ class PostService:
             if post.author_id != str(actor.id) or post.status != PostStatus.DRAFT.value:
                 raise Forbidden("You cannot delete this post")
         post.delete()
+
+    # ---------- Moderation ----------
+    @staticmethod
+    def add_moderation_note(post: Post, actor: User, note: str) -> Post:
+        """Attach a moderation note (editors/admins only)."""
+        if not actor.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value):
+            raise Forbidden("Only editors or admins can add moderation notes")
+        text = (note or "").strip()
+        if not text:
+            raise BadRequest("Note cannot be empty")
+
+        entry = ModerationNote(author=actor, note=text, created_at=datetime.utcnow())
+        # Atomic push so we don't race with concurrent updates to the post.
+        Post.objects(id=post.id).update_one(push__moderation_notes=entry)
+        post.moderation_notes = list(post.moderation_notes or []) + [entry]
+        return post
 
     # ---------- Workflow ----------
     @staticmethod
@@ -148,6 +223,8 @@ class PostService:
             actor,
             note=f"Status -> {target.value}" + (f" ({note})" if note else ""),
         )
+        # Fire notifications after the status change is durable.
+        NotificationService.dispatch_status_change(post, target.value, actor)
         return post
 
     # ---------- Queries ----------
@@ -161,6 +238,7 @@ class PostService:
         search: str | None = None,
         featured: bool | None = None,
         pinned: bool | None = None,
+        public_submission: bool | None = None,
         public_only: bool = False,
     ):
         q = Post.objects
@@ -184,6 +262,8 @@ class PostService:
             q = q.filter(is_featured=featured)
         if pinned is not None:
             q = q.filter(is_pinned=pinned)
+        if public_submission is not None:
+            q = q.filter(is_public_submission=public_submission)
 
         if tag:
             tag_doc = Tag.objects(slug=tag).first()
@@ -217,14 +297,47 @@ class PostService:
             raise NotFound("Post not found")
         return post
 
+    # ---------- Anti-spam ----------
+    @staticmethod
+    def check_daily_submission_limit(
+        author: User, limit: int = DAILY_PUBLIC_SUBMISSION_LIMIT
+    ) -> None:
+        """Public pre-flight check so callers can reject a request before
+        spending Cloudinary uploads. `submit_public` also calls this internally
+        as defense-in-depth."""
+        PostService._enforce_daily_submission_limit(author, limit=limit)
+
     # ---------- Internals ----------
+    @staticmethod
+    def _enforce_daily_submission_limit(
+        author: User, limit: int = DAILY_PUBLIC_SUBMISSION_LIMIT
+    ) -> None:
+        """Refuse more than `limit` public submissions in a rolling 24h window."""
+        since = datetime.utcnow() - timedelta(hours=24)
+        count = Post.objects(
+            author=author,
+            is_public_submission=True,
+            created_at__gte=since,
+        ).count()
+        if count >= limit:
+            raise BadRequest(
+                f"Submission limit reached ({limit} per 24 hours). "
+                "Please try again later."
+            )
+
     @staticmethod
     def _assert_can_edit(post: Post, actor: User) -> None:
         if actor.has_role(RoleName.ADMIN.value) or actor.has_role(RoleName.EDITOR.value):
             return
         if actor.has_role(RoleName.WRITER.value) and post.author_id == str(actor.id):
-            # Writers can edit their own drafts & rejected posts.
-            if post.status in (PostStatus.DRAFT.value, PostStatus.REJECTED.value):
+            # Writers can edit their own drafts, rejected posts, and anything
+            # bounced back with changes_required.
+            if post.status in (
+                PostStatus.DRAFT.value,
+                PostStatus.REJECTED.value,
+                PostStatus.REJECTED_PUBLIC.value,
+                PostStatus.CHANGES_REQUIRED.value,
+            ):
                 return
         raise Forbidden("You cannot edit this post in its current state")
 
@@ -249,6 +362,12 @@ class PostService:
 
     @staticmethod
     def _snapshot(post: Post, actor: User, note: str | None = None) -> None:
+        """Snapshot the post content + append a status_history row if status changed.
+
+        Keeping both in one place guarantees every meaningful write leaves
+        an audit trail on both the versions collection (full content) and
+        the embedded status_history list (lightweight timeline).
+        """
         last = PostVersion.objects(post=post).order_by("-version").first()
         next_version = (last.version if last else 0) + 1
         PostVersion(
@@ -263,3 +382,18 @@ class PostService:
             changed_by=actor,
             change_note=note,
         ).save()
+
+        # Append a status_history entry only when the status actually differs
+        # from the last recorded entry (or when this is the first entry).
+        history = post.status_history or []
+        last_status = history[-1].status if history else None
+        if last_status != post.status:
+            entry = StatusHistoryEntry(
+                status=post.status,
+                changed_by=actor,
+                changed_at=datetime.utcnow(),
+                note=note,
+            )
+            # Atomic push avoids races with concurrent post.save() calls.
+            Post.objects(id=post.id).update_one(push__status_history=entry)
+            post.status_history = list(history) + [entry]

@@ -76,6 +76,59 @@
     </section>
 
     <section class="panel">
+      <h3>Status history</h3>
+      {% if post.status_history %}
+        <ul class="timeline">
+          {% for h in post.status_history|reverse %}
+            <li class="timeline-item">
+              <p>
+                <span class="tag status-{{ h.status }}">{{ h.status.replace('_', ' ') }}</span>
+              </p>
+              <p class="muted small">
+                {{ h.changed_at.strftime('%b %d, %Y %H:%M') if h.changed_at else '' }}
+                {% if h.changed_by %}&middot; {{ h.changed_by.name }}{% else %}&middot; <em>system</em>{% endif %}
+              </p>
+              {% if h.note %}<p class="muted small">{{ h.note }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty small">No status changes yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h3>Moderation notes</h3>
+      {% if post.moderation_notes %}
+        <ul class="row-list compact">
+          {% for note in post.moderation_notes|reverse %}
+            <li class="row">
+              <div>
+                <p style="margin: 0;">{{ note.note }}</p>
+                <p class="row-meta muted small">
+                  {% if note.author %}{{ note.author.name }}{% else %}unknown{% endif %}
+                  &middot; {{ note.created_at.strftime('%b %d, %Y %H:%M') if note.created_at else '' }}
+                </p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty small">No moderation notes yet.</p>
+      {% endif %}
+      {% if current_user.has_any_role(RoleName.EDITOR.value, RoleName.ADMIN.value) %}
+        <form method="POST" action="{{ url_for('web.post_moderation_note', post_id=post.id) }}" class="form" style="margin-top: 0.75rem;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label class="field">
+            <span>Add a note</span>
+            <textarea name="note" rows="2" maxlength="1000" placeholder="Feedback for the author..." required></textarea>
+          </label>
+          <button type="submit" class="btn btn-secondary btn-sm">Add note</button>
+        </form>
+      {% endif %}
+    </section>
+
+    <section class="panel">
       <h3>Version history</h3>
       {% if versions %}
         <ul class="row-list compact">

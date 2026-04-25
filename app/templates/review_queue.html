@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Internal review queue{% endblock %}
+{% block subheading %}<p class="muted">Posts currently in editorial review.</p>{% endblock %}
+
+{% block content %}
+{% if posts %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Author</th>
+        <th>Updated</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="row-title">{{ p.title }}</a>
+          <p class="row-meta muted">
+            /{{ p.slug }}
+            {% if p.is_public_submission %}&middot; <span class="tag tag-accent">public</span>{% endif %}
+          </p>
+        </td>
+        <td><span class="tag tag-neutral">{{ p.category }}</span></td>
+        <td><span class="tag status-{{ p.status }}">{{ p.status.replace('_', ' ') }}</span></td>
+        <td>
+          {{ p.author.name if p.author else '&mdash;' }}
+          {% if p.author %}<br /><span class="muted small">{{ p.author.email }}</span>{% endif %}
+        </td>
+        <td class="muted">{{ p.updated_at.strftime('%b %d, %Y %H:%M') if p.updated_at else '' }}</td>
+        <td class="col-actions">
+          <a href="{{ url_for('web.post_detail', post_id=p.id) }}" class="btn btn-ghost btn-sm">Review</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <p class="empty">No posts are in review right now.</p>
+{% endif %}
+{% endblock %}

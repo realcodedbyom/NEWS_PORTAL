@@ -32,7 +32,9 @@
       {% for m in items %}
         <figure class="media-card">
           {% if m.media_type == 'image' %}
-            <img src="{{ m.url }}" alt="{{ m.alt_text or m.original_name }}" loading="lazy" />
+            <img src="{{ cld_url(m, width=320, height=200) }}"
+                 width="320" height="200"
+                 alt="{{ m.alt_text or m.original_name }}" loading="lazy" decoding="async" />
           {% else %}
             <div class="media-placeholder" aria-hidden="true">{{ m.media_type.upper() }}</div>
           {% endif %}

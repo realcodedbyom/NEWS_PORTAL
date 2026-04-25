@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block subheading %}<p class="muted">Updates about your posts and submissions.</p>{% endblock %}
+
+{% block actions %}
+  {% if unread_notifications_count and unread_notifications_count > 0 %}
+    <form method="POST" action="{{ url_for('web.notifications_read_all') }}" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button type="submit" class="btn btn-secondary">Mark all as read</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="panel notif-panel">
+  {% if notifications %}
+    <ul class="notif-list">
+      {% for n in notifications %}
+        <li class="notif-row {% if not n.is_read %}is-unread{% endif %}">
+          <div class="notif-icon" aria-hidden="true">
+            {% set t = n.type %}
+            {% if t in ('published',) %}&#10003;
+            {% elif t in ('approved', 'ready_for_publish') %}&#8593;
+            {% elif t in ('rejected',) %}&#10007;
+            {% elif t in ('changes_required',) %}&#8634;
+            {% elif t in ('archived',) %}&#8855;
+            {% else %}&#9993;
+            {% endif %}
+          </div>
+          <div class="notif-body">
+            <p>{{ n.message }}</p>
+            <span class="notif-time">
+              {{ n.created_at.strftime('%b %d, %Y %H:%M') if n.created_at else '' }}
+              {% if n.type %}&middot; <span class="muted">{{ n.type.replace('_', ' ') }}</span>{% endif %}
+              {% if n.post %}&middot; <span class="muted">{{ n.post.title[:60] }}</span>{% endif %}
+            </span>
+          </div>
+          <div class="notif-actions">
+            {% if n.post %}
+              <form method="POST" action="{{ url_for('web.notification_mark_read', notification_id=n.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost btn-sm">Open</button>
+              </form>
+            {% elif not n.is_read %}
+              <form method="POST" action="{{ url_for('web.notification_mark_read', notification_id=n.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost btn-sm">Mark read</button>
+              </form>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">No notifications yet. You&apos;ll see updates here when posts you authored change status.</p>
+  {% endif %}
+</section>
+{% endblock %}

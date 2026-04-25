@@ -7,6 +7,9 @@ inside the application factory.
 MongoDB connection is established via `init_db(app)` using
 MongoEngine directly (we skip Flask-MongoEngine for compatibility
 with newer Flask releases).
+
+Cloudinary is initialized via `init_cloudinary(app)` and is
+required — the app will refuse to start without credentials.
 """
 import mongoengine
 from flask_jwt_extended import JWTManager
@@ -40,3 +43,28 @@ def init_db(app) -> None:
         alias="default",
         uuidRepresentation="standard",
     )
+
+
+def init_cloudinary(app) -> None:
+    """Configure the Cloudinary SDK from Flask config.
+
+    Fail-fast: raises RuntimeError if the three required credentials
+    (cloud name, API key, API secret) are missing. Cloudinary is the
+    sole storage backend for media in this app.
+    """
+    name = app.config.get("CLOUDINARY_CLOUD_NAME")
+    key = app.config.get("CLOUDINARY_API_KEY")
+    secret = app.config.get("CLOUDINARY_API_SECRET")
+    if not (name and key and secret):
+        raise RuntimeError(
+            "Cloudinary is required. Set CLOUDINARY_CLOUD_NAME, "
+            "CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in your .env."
+        )
+    import cloudinary
+    cloudinary.config(
+        cloud_name=name,
+        api_key=key,
+        api_secret=secret,
+        secure=True,
+    )
+    app.logger.info("Cloudinary configured for cloud '%s' (secure HTTPS)", name)
