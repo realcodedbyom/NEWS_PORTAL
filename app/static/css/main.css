@@ -648,6 +648,7 @@ input:focus, select:focus, textarea:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.media-card form.inline { display: inline-block; margin-top: 0.25rem; }
 
 /* ============================================================
    Auth / fullscreen

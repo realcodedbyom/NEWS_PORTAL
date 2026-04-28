@@ -46,8 +46,27 @@ def _resolve_media(ref_id):
 class PostService:
     # ---------- Create ----------
     @staticmethod
-    def create(data: dict, author: User) -> Post:
+    def create(
+        data: dict,
+        author: User,
+        images: list[Media] | None = None,
+    ) -> Post:
+        """Create a post from the CMS.
+
+        - Optional `images` list (from multipart uploads) supplies the
+          featured image + gallery when `data` doesn't already specify them.
+        - If `author` is an admin, the post is auto-published immediately
+          (admins bypass the draft -> review -> publish chain).
+        """
         slug_source = data.get("slug") or data["title"]
+
+        # Resolve featured image: explicit ID wins over uploaded files.
+        featured_image = _resolve_media(data.get("featured_image_id"))
+        extra_images = [m for m in (images or []) if m]
+        if featured_image is None and extra_images:
+            featured_image = extra_images[0]
+            extra_images = extra_images[1:]
+
         post = Post(
             title=data["title"].strip(),
             subtitle=data.get("subtitle"),
@@ -62,14 +81,58 @@ class PostService:
             publish_at=data.get("publish_at"),
             expires_at=data.get("expires_at"),
             author=author,
-            featured_image=_resolve_media(data.get("featured_image_id")),
+            featured_image=featured_image,
         )
 
         PostService._attach_tags(post, data.get("tags", []))
         PostService._attach_gallery(post, data.get("gallery_ids", []))
+        if extra_images:
+            post.gallery.extend(extra_images)
+
+        # Admin fast-path: admins bypass the draft -> review -> publish chain.
+        # If they chose a future publish_at we stage the post in
+        # ready_to_publish so the scheduler can flip it to published at the
+        # scheduled time (and fire the right notifications).
+        is_admin = bool(
+            author and author.has_role(RoleName.ADMIN.value)
+        )
+        admin_autopublish = False
+        admin_schedule = False
+        if is_admin:
+            now = datetime.utcnow()
+            post.editor = post.editor or author
+            if post.publish_at and post.publish_at > now:
+                post.status = PostStatus.READY_TO_PUBLISH.value
+                admin_schedule = True
+            else:
+                post.status = PostStatus.PUBLISHED.value
+                post.publisher = author
+                post.published_at = now
+                if not post.publish_at:
+                    post.publish_at = now
+                admin_autopublish = True
 
         post.save()
-        PostService._snapshot(post, author, note="Created")
+        if admin_autopublish:
+            snapshot_note = "Admin auto-publish"
+        elif admin_schedule:
+            snapshot_note = "Admin scheduled for publish"
+        else:
+            snapshot_note = "Created"
+        PostService._snapshot(post, author, note=snapshot_note)
+
+        if admin_autopublish:
+            # Fire PUBLISHED event so interested listeners (editors, etc.)
+            # get notified. Self-notify is skipped inside NotificationService.
+            NotificationService.dispatch_status_change(
+                post, PostStatus.PUBLISHED.value, author
+            )
+        elif admin_schedule:
+            # Stage the scheduler with the ready_to_publish event — the
+            # scheduler will fire PUBLISHED when it flips the status.
+            NotificationService.dispatch_status_change(
+                post, PostStatus.READY_TO_PUBLISH.value, author
+            )
         return post
 
     # ---------- Public submission ----------
@@ -122,7 +185,12 @@ class PostService:
 
     # ---------- Update ----------
     @staticmethod
-    def update(post: Post, data: dict, actor: User) -> Post:
+    def update(
+        post: Post,
+        data: dict,
+        actor: User,
+        images: list[Media] | None = None,
+    ) -> Post:
         PostService._assert_can_edit(post, actor)
 
         for field in ("title", "subtitle", "content", "excerpt", "category",
@@ -131,7 +199,8 @@ class PostService:
             if field in data:
                 setattr(post, field, data[field])
 
-        if "featured_image_id" in data:
+        explicit_featured = "featured_image_id" in data
+        if explicit_featured:
             post.featured_image = _resolve_media(data.get("featured_image_id"))
 
         if data.get("slug"):
@@ -145,8 +214,42 @@ class PostService:
             post.gallery = []
             PostService._attach_gallery(post, data["gallery_ids"])
 
+        # New uploads from the edit form: only fill featured_image if the
+        # post has none AND the caller didn't explicitly set one. Extras
+        # always append to the existing gallery.
+        extra_images = [m for m in (images or []) if m]
+        if extra_images:
+            if post.featured_image is None and not explicit_featured:
+                post.featured_image = extra_images[0]
+                extra_images = extra_images[1:]
+            if extra_images:
+                post.gallery = list(post.gallery or []) + extra_images
+
         post.save()
         PostService._snapshot(post, actor, note="Updated")
+        return post
+
+    # ---------- Inline media management ----------
+    @staticmethod
+    def clear_featured_image(post: Post) -> Post:
+        """Detach the featured image from this post.
+
+        The underlying Media document is NOT deleted so it remains
+        available in the library / other posts.
+        """
+        post.featured_image = None
+        post.save()
+        return post
+
+    @staticmethod
+    def remove_gallery_item(post: Post, media_id) -> Post:
+        """Detach a single media from this post's gallery (non-destructive)."""
+        target = str(media_id)
+        post.gallery = [
+            m for m in (post.gallery or [])
+            if m and str(m.id) != target
+        ]
+        post.save()
         return post
 
     # ---------- Delete ----------

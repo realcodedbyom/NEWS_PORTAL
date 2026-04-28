@@ -357,14 +357,33 @@ def posts_list():
 @login_required
 @roles_required(RoleName.WRITER.value, RoleName.EDITOR.value, RoleName.ADMIN.value)
 def post_new():
+    user = _current_user()
     if request.method == "POST":
         data = _read_post_form()
+        files = _collect_post_images()
+        images: list[Media] = []
+        if files:
+            try:
+                images = MediaService.upload_many(files, user, max_count=10)
+            except AppException as exc:
+                flash(exc.message, "error")
+                return render_template("posts/form.html", post=None, form=data,
+                                       categories=PostCategory.values()), exc.status_code
         try:
-            post = PostService.create(data=data, author=_current_user())
+            post = PostService.create(data=data, author=user, images=images)
         except AppException as exc:
+            # Roll back any uploaded media so we don't orphan Cloudinary assets.
+            for m in images:
+                try:
+                    MediaService.delete(m)
+                except Exception:
+                    pass
             flash(exc.message, "error")
             return render_template("posts/form.html", post=None, form=data,
                                    categories=PostCategory.values()), exc.status_code
+        if post.status == PostStatus.PUBLISHED.value:
+            flash("Post published.", "success")
+            return redirect(url_for("web.post_detail", post_id=str(post.id)))
         flash("Draft created.", "success")
         return redirect(url_for("web.post_edit", post_id=str(post.id)))
     return render_template("posts/form.html", post=None, form={}, categories=PostCategory.values())
@@ -416,9 +435,23 @@ def post_edit(post_id: str):
 
     if request.method == "POST":
         data = _read_post_form()
+        files = _collect_post_images()
+        images: list[Media] = []
+        if files:
+            try:
+                images = MediaService.upload_many(files, user, max_count=10)
+            except AppException as exc:
+                flash(exc.message, "error")
+                return render_template("posts/form.html", post=post, form=data,
+                                       categories=PostCategory.values()), exc.status_code
         try:
-            PostService.update(post=post, data=data, actor=user)
+            PostService.update(post=post, data=data, actor=user, images=images)
         except AppException as exc:
+            for m in images:
+                try:
+                    MediaService.delete(m)
+                except Exception:
+                    pass
             flash(exc.message, "error")
             return render_template("posts/form.html", post=post, form=data,
                                    categories=PostCategory.values()), exc.status_code
@@ -439,6 +472,29 @@ def post_edit(post_id: str):
         "expires_at": post.expires_at.strftime("%Y-%m-%dT%H:%M") if post.expires_at else "",
     }
     return render_template("posts/form.html", post=post, form=form, categories=PostCategory.values())
+
+
+@web_bp.route("/posts/<string:post_id>/media/featured/clear", methods=["POST"])
+@login_required
+def post_media_featured_clear(post_id: str):
+    post = _get_or_404(Post, post_id)
+    _assert_can_edit_web(post, _current_user())
+    PostService.clear_featured_image(post)
+    flash("Featured image cleared.", "success")
+    return redirect(url_for("web.post_edit", post_id=post_id))
+
+
+@web_bp.route(
+    "/posts/<string:post_id>/media/gallery/<string:media_id>/remove",
+    methods=["POST"],
+)
+@login_required
+def post_media_gallery_remove(post_id: str, media_id: str):
+    post = _get_or_404(Post, post_id)
+    _assert_can_edit_web(post, _current_user())
+    PostService.remove_gallery_item(post, media_id)
+    flash("Image removed from gallery.", "success")
+    return redirect(url_for("web.post_edit", post_id=post_id))
 
 
 @web_bp.route("/posts/<string:post_id>/moderation-note", methods=["POST"])
@@ -486,6 +542,19 @@ def post_delete(post_id: str):
         return redirect(url_for("web.post_detail", post_id=str(post.id)))
     flash("Post deleted.", "success")
     return redirect(url_for("web.posts_list"))
+
+
+def _collect_post_images():
+    """Return uploaded image files from the post form, filtering blanks."""
+    return [f for f in request.files.getlist("images") if f and f.filename]
+
+
+def _assert_can_edit_web(post, user):
+    """Guard that reuses PostService's permission logic for the web layer."""
+    try:
+        PostService._assert_can_edit(post, user)
+    except AppException:
+        abort(403)
 
 
 def _read_post_form() -> dict:

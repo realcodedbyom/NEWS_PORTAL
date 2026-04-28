@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{% if post %}Edit: {{ post.title }}{% else %}New post{% endif %}{% endblock %}
 {% block subheading %}
-  <p class="muted">{% if post %}Editing an existing post.{% else %}Start a new draft. It will stay private until submitted for review.{% endif %}</p>
+  {% if post %}
+    <p class="muted">Editing an existing post.</p>
+  {% elif current_user.has_role(RoleName.ADMIN.value) %}
+    <p class="muted">Start a new post. As an admin it will be <strong>published immediately</strong>.</p>
+  {% else %}
+    <p class="muted">Start a new draft. It will stay private until submitted for review.</p>
+  {% endif %}
 {% endblock %}
 
 {% block actions %}
@@ -9,7 +15,7 @@
 {% endblock %}
 
 {% block content %}
-<form method="POST" class="form form-grid"
+<form method="POST" enctype="multipart/form-data" class="form form-grid"
       action="{% if post %}{{ url_for('web.post_edit', post_id=post.id) }}{% else %}{{ url_for('web.post_new') }}{% endif %}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
@@ -32,6 +38,19 @@
     <label class="field">
       <span>Content</span>
       <textarea name="content" rows="18" required>{{ form.content or '' }}</textarea>
+    </label>
+
+    <label class="field">
+      <span>Attach images (up to 10)</span>
+      <input type="file" name="images" multiple
+             accept="image/png,image/jpeg,image/webp,image/gif" />
+      <small class="muted">
+        {% if post and post.featured_image %}
+          New uploads will be appended to the gallery. JPG, PNG, WebP, GIF.
+        {% else %}
+          First new image becomes the featured image (if none is set). JPG, PNG, WebP, GIF.
+        {% endif %}
+      </small>
     </label>
   </div>
 
@@ -70,10 +89,76 @@
         <label><input type="checkbox" name="is_pinned" {% if form.is_pinned %}checked{% endif %} /> Pinned</label>
       </fieldset>
 
+      {% if not post and current_user.has_role(RoleName.ADMIN.value) %}
+        <p class="muted small"><strong>Admin:</strong> this post will be published immediately.</p>
+      {% endif %}
+
       <button type="submit" class="btn btn-primary btn-block">
-        {% if post %}Save changes{% else %}Create draft{% endif %}
+        {% if post %}
+          Save changes
+        {% elif current_user.has_role(RoleName.ADMIN.value) %}
+          Publish now
+        {% else %}
+          Create draft
+        {% endif %}
       </button>
     </div>
   </aside>
 </form>
+
+{% if post %}
+<section class="panel" style="margin-top: 1.25rem;">
+  <h3>Attached media</h3>
+
+  {% if post.featured_image %}
+    <div style="margin-bottom: 1rem;">
+      <p class="muted small" style="margin-bottom: 0.5rem;">Featured image</p>
+      <figure class="media-card" style="max-width: 260px;">
+        <img src="{{ cld_url(post.featured_image, width=260, height=170) }}"
+             width="260" height="170"
+             alt="{{ post.featured_image.alt_text or post.featured_image.original_name }}"
+             loading="lazy" decoding="async" />
+        <figcaption>
+          <strong title="{{ post.featured_image.original_name }}">{{ post.featured_image.original_name }}</strong>
+          <form method="POST" class="inline"
+                action="{{ url_for('web.post_media_featured_clear', post_id=post.id) }}"
+                onsubmit="return confirm('Remove featured image from this post?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-ghost btn-sm">Remove</button>
+          </form>
+        </figcaption>
+      </figure>
+    </div>
+  {% else %}
+    <p class="muted small" style="margin-bottom: 1rem;">No featured image. Upload one above to set it.</p>
+  {% endif %}
+
+  <p class="muted small" style="margin-bottom: 0.5rem;">Gallery ({{ post.gallery|length }})</p>
+  {% if post.gallery %}
+    <div class="media-grid">
+      {% for m in post.gallery %}
+        {% if m %}
+          <figure class="media-card">
+            <img src="{{ cld_url(m, width=240, height=160) }}"
+                 width="240" height="160"
+                 alt="{{ m.alt_text or m.original_name }}"
+                 loading="lazy" decoding="async" />
+            <figcaption>
+              <strong title="{{ m.original_name }}">{{ m.original_name }}</strong>
+              <form method="POST" class="inline"
+                    action="{{ url_for('web.post_media_gallery_remove', post_id=post.id, media_id=m.id) }}"
+                    onsubmit="return confirm('Remove this image from the gallery?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost btn-sm">Remove</button>
+              </form>
+            </figcaption>
+          </figure>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty small">No gallery images yet. Attach images above to add some.</p>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

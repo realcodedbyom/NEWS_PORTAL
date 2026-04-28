@@ -199,12 +199,19 @@ class NotificationService:
             return
 
         if new_status == PostStatus.PUBLISHED.value:
-            NotificationService.notify(
-                author,
-                NotificationType.PUBLISHED.value,
-                f"Your post '{title}' has been published!",
-                post=post,
+            # Skip self-notify when the publisher IS the author (the common
+            # admin self-publish case) — nobody wants a notification about
+            # something they just did themselves.
+            is_self_publish = bool(
+                actor and author and str(actor.id) == str(author.id)
             )
+            if not is_self_publish:
+                NotificationService.notify(
+                    author,
+                    NotificationType.PUBLISHED.value,
+                    f"Your post '{title}' has been published!",
+                    post=post,
+                )
             if post.editor and (not author or str(post.editor.id) != str(author.id)):
                 NotificationService.notify(
                     post.editor,
