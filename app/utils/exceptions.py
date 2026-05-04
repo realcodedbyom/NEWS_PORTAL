@@ -50,3 +50,8 @@ class ValidationError(AppException):
 class WorkflowError(AppException):
     status_code = 409
     message = "Invalid workflow transition"
+
+
+class TooManyRequests(AppException):
+    status_code = 429
+    message = "Too many requests"

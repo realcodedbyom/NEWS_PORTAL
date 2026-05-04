@@ -3,6 +3,7 @@ Notifications are sent to users on workflow events (submissions,
 approvals, rejections, publish, etc.). Stored in Mongo; reads are
 per-user, newest first, with an unread flag.
 """
+from bson import DBRef
 from mongoengine import (
     NULLIFY,
     StringField,
@@ -38,6 +39,30 @@ class Notification(TimestampedDocument):
     @property
     def post_id(self):
         return _ref_id(self, "post")
+
+    @property
+    def safe_post(self):
+        """Return the linked Post, or None if the ref is stale/deleted.
+
+        MongoEngine's reverse_delete_rule=NULLIFY covers future deletions,
+        but this guards against orphan DBRefs left over from historical
+        deletes or direct Mongo writes. Two failure modes are handled:
+
+        1. Lazy dereference raises (rare, depends on MongoEngine version).
+        2. Lazy dereference silently returns a bare ``bson.DBRef`` when the
+           target document has been hard-deleted outside the ORM — in this
+           case no exception fires, so we must type-check the result.
+
+        Any template that touches ``notification.post`` should use this
+        accessor instead so a stale ref never 500s the page.
+        """
+        try:
+            post = self.post
+        except Exception:
+            return None
+        if post is None or isinstance(post, DBRef):
+            return None
+        return post
 
     def to_dict(self) -> dict:
         return {

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
 </head>
 <body>
@@ -20,34 +20,62 @@
 
       {# ---------- HERO ---------- #}
       <section class="hero-wrap" aria-label="Top stories">
-        <article class="hero-main">
-          {% if featured_story %}
-            {% if featured_story.featured_image %}
-              <a class="hero-media" href="{{ url_for('web.news_detail', slug=featured_story.slug) }}">
-                <img src="{{ cld_url(featured_story.featured_image, width=1280, height=720) }}"
-                     srcset="{{ cld_srcset(featured_story.featured_image, ref_width=1280, ref_height=720) }}"
-                     sizes="{{ CLD_SIZES_HERO }}"
-                     width="1280" height="720"
-                     alt="{{ featured_story.featured_image.alt_text or featured_story.title }}"
-                     loading="eager" fetchpriority="high" />
-              </a>
-            {% endif %}
-            <div class="hero-body">
-              <p class="kicker">FEATURED · {{ featured_story.category|replace('_',' ')|title }}</p>
-              <h2 class="hero-title">
-                <a href="{{ url_for('web.news_detail', slug=featured_story.slug) }}">{{ featured_story.title }}</a>
-              </h2>
-              {% if featured_story.excerpt or featured_story.subtitle %}
-                <p class="hero-excerpt">{{ featured_story.excerpt or featured_story.subtitle }}</p>
+        <article class="hero-main hero-carousel" aria-roledescription="carousel" aria-label="Featured and top stories" data-interval="5000" tabindex="0">
+          {% if carousel_items %}
+            <div class="carousel-viewport">
+              <ul class="carousel-track" role="list" aria-live="polite">
+                {% for p in carousel_items %}
+                <li class="carousel-slide {% if loop.first %}is-active{% endif %}" data-index="{{ loop.index0 }}">
+                  {% if p.featured_image %}
+                    <a class="hero-media" href="{{ url_for('web.news_detail', slug=p.slug) }}" tabindex="{% if loop.first %}0{% else %}-1{% endif %}">
+                      <img src="{{ cld_url(p.featured_image, width=1280, height=720) }}"
+                           srcset="{{ cld_srcset(p.featured_image, ref_width=1280, ref_height=720) }}"
+                           sizes="{{ CLD_SIZES_HERO }}"
+                           width="1280" height="720"
+                           alt="{{ p.featured_image.alt_text or p.title }}"
+                           loading="{% if loop.first %}eager{% else %}lazy{% endif %}"
+                           {% if loop.first %}fetchpriority="high"{% endif %} decoding="async" />
+                    </a>
+                  {% endif %}
+                  <div class="hero-body">
+                    <p class="kicker">{% if p.is_featured %}FEATURED · {% endif %}{{ p.category|replace('_',' ')|title }}</p>
+                    <h2 class="hero-title">
+                      <a href="{{ url_for('web.news_detail', slug=p.slug) }}" tabindex="{% if loop.first %}0{% else %}-1{% endif %}">{{ p.title }}</a>
+                    </h2>
+                    {% if p.excerpt or p.subtitle %}
+                      <p class="hero-excerpt">{{ p.excerpt or p.subtitle }}</p>
+                    {% endif %}
+                    <p class="story-meta">
+                      <span>By DSVV Newsroom</span>
+                      <span class="meta-sep" aria-hidden="true">·</span>
+                      {% if p.published_at %}<span>{{ p.published_at.strftime('%d %b %Y, %I:%M %p') }}</span>{% endif %}
+                      <span class="meta-sep" aria-hidden="true">·</span>
+                      <span>{{ p.view_count }} views</span>
+                    </p>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+
+              {% if carousel_items|length > 1 %}
+              <div class="carousel-arrows">
+                <button type="button" class="carousel-arrow carousel-prev" aria-label="Previous story">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <button type="button" class="carousel-arrow carousel-next" aria-label="Next story">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+              </div>
               {% endif %}
-              <p class="story-meta">
-                <span>By DSVV Newsroom</span>
-                <span class="meta-sep" aria-hidden="true">·</span>
-                {% if featured_story.published_at %}<span>{{ featured_story.published_at.strftime('%d %b %Y, %I:%M %p') }}</span>{% endif %}
-                <span class="meta-sep" aria-hidden="true">·</span>
-                <span>{{ featured_story.view_count }} views</span>
-              </p>
             </div>
+
+            {% if carousel_items|length > 1 %}
+            <div class="carousel-dots" role="group" aria-label="Slide selector">
+              {% for p in carousel_items %}
+                <button type="button" class="carousel-dot {% if loop.first %}is-active{% endif %}" data-index="{{ loop.index0 }}" aria-label="Go to slide {{ loop.index }}"></button>
+              {% endfor %}
+            </div>
+            {% endif %}
           {% else %}
             <div class="hero-empty">
               <p class="kicker">WELCOME</p>
@@ -57,7 +85,7 @@
           {% endif %}
         </article>
 
-        <aside class="hero-aside" aria-label="Top stories">
+        <aside class="hero-aside" aria-label="Top stories list">
           <div class="aside-head">
             <h2>Top Stories</h2>
           </div>
@@ -65,16 +93,21 @@
             <ol class="top-stories">
               {% for p in top_stories[:6] %}
               <li>
-                <span class="top-num">{{ loop.index }}</span>
+                <span class="top-num">{{ '%02d' % loop.index }}</span>
                 <div class="top-body">
                   <p class="top-kicker">{{ p.category|replace('_',' ')|title }}</p>
                   <a class="top-title" href="{{ url_for('web.news_detail', slug=p.slug) }}">{{ p.title }}</a>
                 </div>
                 {% if p.featured_image %}
-                  <img class="top-thumb"
-                       src="{{ cld_url(p.featured_image, width=120, height=80) }}"
-                       width="120" height="80"
-                       alt="" loading="lazy" decoding="async" />
+                  <a href="{{ url_for('web.news_detail', slug=p.slug) }}" tabindex="-1" aria-hidden="true">
+                    <img class="top-thumb"
+                         src="{{ cld_url(p.featured_image, width=112, height=112) }}"
+                         srcset="{{ cld_srcset(p.featured_image, ref_width=112, ref_height=112) }}"
+                         sizes="56px"
+                         width="56" height="56"
+                         alt="{{ p.featured_image.alt_text or p.title }}"
+                         loading="lazy" decoding="async" />
+                  </a>
                 {% endif %}
               </li>
               {% endfor %}
@@ -175,5 +208,50 @@
   </main>
 
   {% include 'public/_footer.html' %}
+
+  <script>
+  (function(){
+    const root = document.querySelector('.hero-carousel');
+    if (!root) return;
+    const slides = Array.from(root.querySelectorAll('.carousel-slide'));
+    const dots = Array.from(root.querySelectorAll('.carousel-dot'));
+    if (slides.length <= 1) return;
+    let current = 0;
+    const interval = parseInt(root.getAttribute('data-interval'), 10) || 5000;
+    let timer = null;
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function show(i) {
+      current = (i + slides.length) % slides.length;
+      slides.forEach((s, idx) => s.classList.toggle('is-active', idx === current));
+      dots.forEach((d, idx) => d.classList.toggle('is-active', idx === current));
+    }
+    function next() { show(current + 1); }
+    function prev() { show(current - 1); }
+    function start() { stop(); if (reduced) return; timer = setInterval(next, interval); }
+    function stop()  { if (timer) { clearInterval(timer); timer = null; } }
+
+    const nextBtn = root.querySelector('.carousel-next');
+    const prevBtn = root.querySelector('.carousel-prev');
+    if (nextBtn) nextBtn.addEventListener('click', () => { next(); start(); });
+    if (prevBtn) prevBtn.addEventListener('click', () => { prev(); start(); });
+    dots.forEach((dot, idx) => dot.addEventListener('click', () => { show(idx); start(); }));
+
+    // Keyboard nav works regardless of motion preference — it's a manual affordance.
+    root.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowLeft') { prev(); start(); }
+      else if (ev.key === 'ArrowRight') { next(); start(); }
+    });
+    // Auto-advance-related listeners — start() itself no-ops under reduced motion.
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('mouseleave', start);
+    root.addEventListener('focusin', stop);
+    root.addEventListener('focusout', start);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) stop(); else start();
+    });
+    start();
+  })();
+  </script>
 </body>
 </html>

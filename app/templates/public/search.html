@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ category|replace('_',' ')|title }} · DSVV News</title>
+  <title>{% if q %}Search: {{ q }} · DSVV News{% else %}Search · DSVV News{% endif %}</title>
   <meta name="theme-color" content="#EE1C25" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,9 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
 </head>
 <body>
-  {% with active_category = category %}
-    {% include 'public/_header.html' %}
-  {% endwith %}
+  {% include 'public/_header.html' %}
 
   <main id="main">
     <div class="site-wrap">
@@ -22,13 +20,18 @@
       <nav class="breadcrumbs" aria-label="Breadcrumb">
         <a href="{{ url_for('web.news_home') }}">Home</a>
         <span aria-hidden="true">›</span>
-        <span aria-current="page">{{ category|replace('_',' ')|title }}</span>
+        <span aria-current="page">Search</span>
       </nav>
 
       <header class="page-title-block">
-        <p class="kicker">Section</p>
-        <h1 class="page-title">{{ category|replace('_',' ')|title }}</h1>
-        <p class="page-tagline">Latest stories in {{ category|replace('_',' ')|title }} from Dev Sanskriti Vishwavidyalaya.</p>
+        <p class="kicker">Search</p>
+        {% if q %}
+          <h1 class="page-title">Results for &ldquo;{{ q }}&rdquo;</h1>
+          <p class="page-tagline">{{ posts|length }} {{ 'story' if posts|length == 1 else 'stories' }} found.</p>
+        {% else %}
+          <h1 class="page-title">Start typing to search</h1>
+          <p class="page-tagline">Enter a query in the search bar above to find stories.</p>
+        {% endif %}
       </header>
 
       {% if posts %}
@@ -59,11 +62,18 @@
         </article>
         {% endfor %}
       </section>
+      {% elif q %}
+      <section class="empty-block">
+        <p class="kicker">No matches</p>
+        <h2>No stories match your search.</h2>
+        <p>Try different keywords, or browse by category.</p>
+        <a class="btn-red" href="{{ url_for('web.news_home') }}">Back to homepage</a>
+      </section>
       {% else %}
       <section class="empty-block">
-        <p class="kicker">Nothing here yet</p>
-        <h2>No stories in this section.</h2>
-        <p>Check back soon — new stories are published throughout the week.</p>
+        <p class="kicker">Search the newsroom</p>
+        <h2>Type a query to get started.</h2>
+        <p>Use the search bar above to find stories by title, subtitle, excerpt, or body text.</p>
         <a class="btn-red" href="{{ url_for('web.news_home') }}">Back to homepage</a>
       </section>
       {% endif %}

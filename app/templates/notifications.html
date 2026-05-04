@@ -16,6 +16,7 @@
   {% if notifications %}
     <ul class="notif-list">
       {% for n in notifications %}
+        {% set linked_post = n.safe_post %}
         <li class="notif-row {% if not n.is_read %}is-unread{% endif %}">
           <div class="notif-icon" aria-hidden="true">
             {% set t = n.type %}
@@ -32,11 +33,11 @@
             <span class="notif-time">
               {{ n.created_at.strftime('%b %d, %Y %H:%M') if n.created_at else '' }}
               {% if n.type %}&middot; <span class="muted">{{ n.type.replace('_', ' ') }}</span>{% endif %}
-              {% if n.post %}&middot; <span class="muted">{{ n.post.title[:60] }}</span>{% endif %}
+              {% if linked_post %}&middot; <span class="muted">{{ linked_post.title[:60] }}</span>{% endif %}
             </span>
           </div>
           <div class="notif-actions">
-            {% if n.post %}
+            {% if linked_post %}
               <form method="POST" action="{{ url_for('web.notification_mark_read', notification_id=n.id) }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit" class="btn btn-ghost btn-sm">Open</button>

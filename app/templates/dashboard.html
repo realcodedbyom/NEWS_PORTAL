@@ -137,8 +137,9 @@
             {{ n.type.replace('_', ' ') }} &middot; {{ n.created_at.strftime('%b %d, %H:%M') }}
           </p>
         </div>
-        {% if n.post %}
-          <a href="{{ url_for('web.post_detail', post_id=n.post.id) }}" class="btn btn-ghost btn-sm">Open</a>
+        {% set linked_post = n.safe_post %}
+        {% if linked_post %}
+          <a href="{{ url_for('web.post_detail', post_id=linked_post.id) }}" class="btn btn-ghost btn-sm">Open</a>
         {% endif %}
       </li>
     {% endfor %}

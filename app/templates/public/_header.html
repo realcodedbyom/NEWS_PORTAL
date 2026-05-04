@@ -23,9 +23,9 @@
       <p class="brand-title">DSVV<span class="brand-news">NEWS</span></p>
       <p class="brand-tag">Dev Sanskriti Vishwavidyalaya &middot; Haridwar</p>
     </a>
-    <form class="masthead-search" method="GET" action="{{ url_for('web.news_home') }}" role="search">
+    <form class="masthead-search" method="GET" action="{{ url_for('web.news_search') }}" role="search">
       <label class="visually-hidden" for="site-search">Search stories</label>
-      <input id="site-search" type="search" name="q" placeholder="Search stories, topics, people…" autocomplete="off" />
+      <input id="site-search" type="search" name="q" placeholder="Search stories, topics, people…" autocomplete="off" maxlength="200" value="{{ request.args.get('q', '')[:200] }}" />
       <button type="submit" aria-label="Search">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>

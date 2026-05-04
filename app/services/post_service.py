@@ -24,13 +24,49 @@ from ..models.tag import Tag
 from ..models.media import Media
 from ..models.user import User
 from ..utils.enums import PostStatus, PostCategory, RoleName, ALLOWED_TRANSITIONS
-from ..utils.exceptions import NotFound, Forbidden, WorkflowError, BadRequest
+from ..utils.exceptions import NotFound, Forbidden, WorkflowError, BadRequest, TooManyRequests
 from ..utils.slug import generate_unique_slug
 from .notification_service import NotificationService
 
 
 # Anti-spam: maximum public submissions per rolling 24h window per user.
 DAILY_PUBLIC_SUBMISSION_LIMIT = 5
+
+# Minimum sizes for post payloads. Enforced at the service layer so every
+# caller (JSON API, web CMS form, public submit) gets the same guarantee,
+# regardless of whether the caller also runs marshmallow validation.
+MIN_TITLE_LENGTH = 3
+MIN_CONTENT_LENGTH = 20
+
+# Transitions that carry author-facing feedback. When a note is provided
+# for one of these, the note is also appended to post.moderation_notes so
+# it survives subsequent transitions (status_note is transient).
+_FEEDBACK_STATUSES: frozenset = frozenset({
+    PostStatus.CHANGES_REQUIRED,
+    PostStatus.REJECTED,
+    PostStatus.REJECTED_PUBLIC,
+})
+
+
+def _validate_post_payload(data: dict, partial: bool = False) -> None:
+    """Validate title + content length. Raise BadRequest on failure.
+
+    When `partial=True` (update path), only validate fields that are
+    actually present in the payload — omitted fields keep their
+    existing values and don't need re-validation.
+    """
+    if not partial or "title" in data:
+        title = (data.get("title") or "").strip()
+        if len(title) < MIN_TITLE_LENGTH:
+            raise BadRequest(
+                f"Title must be at least {MIN_TITLE_LENGTH} characters."
+            )
+    if not partial or "content" in data:
+        content = (data.get("content") or "").strip()
+        if len(content) < MIN_CONTENT_LENGTH:
+            raise BadRequest(
+                f"Content must be at least {MIN_CONTENT_LENGTH} characters."
+            )
 
 
 def _resolve_media(ref_id):
@@ -58,6 +94,7 @@ class PostService:
         - If `author` is an admin, the post is auto-published immediately
           (admins bypass the draft -> review -> publish chain).
         """
+        _validate_post_payload(data)
         slug_source = data.get("slug") or data["title"]
 
         # Resolve featured image: explicit ID wins over uploaded files.
@@ -150,6 +187,7 @@ class PostService:
         - Increments author.submission_count atomically.
         - Fires the notification hook for PENDING_REVIEW.
         """
+        _validate_post_payload(data)
         PostService._enforce_daily_submission_limit(author)
 
         images = [m for m in (images or []) if m]
@@ -192,6 +230,7 @@ class PostService:
         images: list[Media] | None = None,
     ) -> Post:
         PostService._assert_can_edit(post, actor)
+        _validate_post_payload(data, partial=True)
 
         for field in ("title", "subtitle", "content", "excerpt", "category",
                       "is_featured", "is_announcement", "is_pinned",
@@ -321,6 +360,20 @@ class PostService:
                 post.publish_at = post.published_at
 
         post.save()
+
+        # Feedback-producing transitions: persist the note as a permanent
+        # ModerationNote so the author has a durable record. status_note
+        # is overwritten on the next transition, so it alone isn't enough.
+        note_text = (note or "").strip()
+        if target in _FEEDBACK_STATUSES and note_text and actor:
+            entry = ModerationNote(
+                author=actor,
+                note=note_text,
+                created_at=datetime.utcnow(),
+            )
+            Post.objects(id=post.id).update_one(push__moderation_notes=entry)
+            post.moderation_notes = list(post.moderation_notes or []) + [entry]
+
         PostService._snapshot(
             post,
             actor,
@@ -423,7 +476,7 @@ class PostService:
             created_at__gte=since,
         ).count()
         if count >= limit:
-            raise BadRequest(
+            raise TooManyRequests(
                 f"Submission limit reached ({limit} per 24 hours). "
                 "Please try again later."
             )

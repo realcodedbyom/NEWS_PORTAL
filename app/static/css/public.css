@@ -27,8 +27,9 @@
 
   --live: #ef4444;
 
-  --headline: "Playfair Display", "Merriweather", Georgia, serif;
-  --body: "Source Sans 3", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --headline: "PT Serif", "Georgia", "Times New Roman", serif;
+  --body: "PT Serif", "Georgia", "Times New Roman", serif;
+  --brand-font: "Playfair Display", "PT Serif", Georgia, serif;
 
   --radius-sm: 6px;
   --radius: 10px;
@@ -139,7 +140,7 @@ p { margin: 0; }
 .brand-block:hover { color: inherit; }
 
 .brand-title {
-  font-family: var(--headline);
+  font-family: var(--brand-font);
   font-weight: 900;
   font-size: clamp(1.75rem, 3.6vw, 2.6rem);
   color: var(--ink);
@@ -548,6 +549,110 @@ main > .site-wrap > section { margin-top: 2rem; }
 }
 .top-stories.compact .top-num { font-size: 1.15rem; }
 
+/* ---------- hero carousel (layers on top of .hero-main) ---------- */
+
+.hero-main.hero-carousel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.hero-main.hero-carousel:focus-visible {
+  outline: 3px solid rgba(238, 28, 37, 0.35);
+  outline-offset: 3px;
+}
+
+.carousel-viewport {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-alt);
+}
+.carousel-track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.carousel-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 450ms ease;
+  pointer-events: none;
+}
+.carousel-slide.is-active {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Themed prev/next arrows. The .carousel-arrows overlay pins itself to
+   the image area (16:9) at the top of the viewport, so the buttons stay
+   centered on the photo regardless of how long the slide body is.
+   pointer-events: none on the overlay (with auto on the buttons) lets
+   clicks on empty space pass through to the underlying hero-media link. */
+.carousel-arrows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  pointer-events: none;
+  z-index: 2;
+}
+.carousel-arrow {
+  pointer-events: auto;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--brand-red);
+  color: #fff;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(238, 28, 37, 0.35);
+  opacity: 0.92;
+  transition: background 150ms ease, transform 150ms ease, opacity 150ms ease;
+}
+.carousel-arrow:hover {
+  background: var(--brand-red-dark);
+  transform: scale(1.08);
+  opacity: 1;
+}
+.carousel-arrow:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0 1rem;
+}
+.carousel-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--line-strong);
+  cursor: pointer;
+  padding: 0;
+  transition: background 150ms ease, transform 150ms ease;
+}
+.carousel-dot:hover { background: var(--muted); }
+.carousel-dot.is-active {
+  background: var(--brand-red);
+  transform: scale(1.25);
+}
+
 /* ---------- card grid ---------- */
 
 .card-grid {
@@ -578,7 +683,7 @@ main > .site-wrap > section { margin-top: 2rem; }
 }
 .card-media img {
   width: 100%;
-  aspect-ratio: 16/9;
+  height: 200px;
   object-fit: cover;
   transition: transform 350ms ease;
 }
@@ -1132,7 +1237,8 @@ main > .site-wrap > section { margin-top: 2rem; }
   .social,
   .share,
   .nav-item::after,
-  .footer-list a {
+  .footer-list a,
+  .carousel-slide {
     animation: none !important;
     transition: none !important;
   }

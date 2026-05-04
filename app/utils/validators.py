@@ -37,7 +37,7 @@ class PostCreateSchema(Schema):
     title = fields.String(required=True, validate=validate.Length(min=3, max=255))
     subtitle = fields.String(allow_none=True, validate=validate.Length(max=255))
     slug = fields.String(allow_none=True, validate=validate.Length(max=255))
-    content = fields.String(required=True)
+    content = fields.String(required=True, validate=validate.Length(min=20))
     excerpt = fields.String(allow_none=True, validate=validate.Length(max=500))
     category = fields.String(
         required=True,
@@ -55,7 +55,7 @@ class PostCreateSchema(Schema):
 
 class PostUpdateSchema(PostCreateSchema):
     title = fields.String(validate=validate.Length(min=3, max=255))
-    content = fields.String()
+    content = fields.String(validate=validate.Length(min=20))
     category = fields.String(validate=validate.OneOf([c.value for c in PostCategory]))
 
 

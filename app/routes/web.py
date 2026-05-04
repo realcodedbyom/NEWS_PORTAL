@@ -143,18 +143,34 @@ def _live_posts_base_query():
 
 @web_bp.route("/news")
 def news_home():
-    featured_story = (
+    featured_stories = list(
         _live_posts_base_query()
         .filter(is_featured=True)
         .order_by("-published_at", "-created_at")
-        .first()
+        .limit(8)
     )
+    featured_story = featured_stories[0] if featured_stories else None
 
     top_stories = list(
         _live_posts_base_query()
         .order_by("-is_pinned", "-published_at", "-created_at")
         .limit(8)
     )
+
+    # Build carousel: all featured stories first, then top stories that
+    # aren't already in the featured list, capped to 8 items for perf.
+    # Only include posts with a featured_image so the carousel arrows
+    # stay anchored to the hero photo on every slide.
+    seen_ids = {str(p.id) for p in featured_stories if p.featured_image}
+    carousel_items = [p for p in featured_stories if p.featured_image]
+    for p in top_stories:
+        if not p.featured_image:
+            continue
+        if str(p.id) not in seen_ids:
+            carousel_items.append(p)
+            seen_ids.add(str(p.id))
+        if len(carousel_items) >= 8:
+            break
 
     latest_updates = list(
         _live_posts_base_query()
@@ -174,10 +190,44 @@ def news_home():
     return render_template(
         "public/home.html",
         featured_story=featured_story,
+        featured_stories=featured_stories,
+        carousel_items=carousel_items,
         top_stories=top_stories,
         latest_updates=latest_updates,
         by_category=by_category,
         categories=PostCategory.values(),
+    )
+
+
+@web_bp.route("/news/search")
+def news_search():
+    # Cap length as defense-in-depth against pathological queries hitting
+    # the regex-based icontains scan over all post content.
+    q = (request.args.get("q") or "").strip()[:200]
+    posts = []
+    if q:
+        posts = list(
+            _live_posts_base_query()
+            .filter(
+                Q(title__icontains=q)
+                | Q(subtitle__icontains=q)
+                | Q(excerpt__icontains=q)
+                | Q(content__icontains=q)
+            )
+            .order_by("-published_at", "-created_at")
+            .limit(60)
+        )
+    top_stories = list(
+        _live_posts_base_query()
+        .order_by("-is_pinned", "-published_at", "-created_at")
+        .limit(8)
+    )
+    return render_template(
+        "public/search.html",
+        q=q,
+        posts=posts,
+        categories=PostCategory.values(),
+        top_stories=top_stories,
     )
 
 
@@ -728,9 +778,12 @@ def notification_mark_read(notification_id: str):
     except AppException as exc:
         flash(exc.message, "error")
         return redirect(url_for("web.notifications_list"))
-    # If the notification points at a post, deep-link to it.
-    if notification.post:
-        return redirect(url_for("web.post_detail", post_id=str(notification.post.id)))
+    # If the notification points at a live post, deep-link to it.
+    # safe_post swallows stale-ref DoesNotExist so a deleted post
+    # doesn't 500 the notification redirect.
+    linked = notification.safe_post
+    if linked:
+        return redirect(url_for("web.post_detail", post_id=str(linked.id)))
     return redirect(url_for("web.notifications_list"))
 
 
