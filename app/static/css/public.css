@@ -219,6 +219,27 @@ p { margin: 0; }
   z-index: 40;
   box-shadow: 0 1px 0 rgba(0,0,0,0.05), 0 6px 14px rgba(238, 28, 37, 0.08);
 }
+/* Fade the right edge of the nav so users on narrow viewports see that
+   more categories are reachable by swiping. The pseudo-element sits
+   inside .nav-main (sticky establishes a containing block) and is
+   click-through so it never blocks the last category tab. Hidden on
+   desktop where every tab already fits. */
+.nav-main { position: sticky; /* explicit for pseudo-element containing block */ }
+.nav-main::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 42px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(238, 28, 37, 0) 0%, var(--brand-red) 85%);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+@media (max-width: 900px) {
+  .nav-main::after { opacity: 1; }
+}
 
 .nav-inner {
   display: flex;
@@ -226,8 +247,11 @@ p { margin: 0; }
   gap: 0;
   overflow-x: auto;
   scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
 }
 .nav-inner::-webkit-scrollbar { display: none; }
+.nav-item { scroll-snap-align: start; }
 
 .nav-item {
   position: relative;
@@ -1001,8 +1025,79 @@ main > .site-wrap > section { margin-top: 2rem; }
   line-height: 1.5;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
-.article-body img { border-radius: var(--radius-sm); margin: 0.75rem 0; }
+.article-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  margin: 0.75rem 0;
+  display: block;
+}
+.article-body figure { margin: 1rem 0; max-width: 100%; }
+.article-body figure img { margin: 0; }
 .article-body ul, .article-body ol { padding-left: 1.25rem; margin: 0 0 1rem; }
+
+/* Safety net for scraped content: keep block-level elements from
+   escaping the reading column on mobile. Scoped to the elements that
+   actually overflow (vs. `*` which applies the rule to every inline
+   tag for no benefit). */
+.article-body img,
+.article-body video,
+.article-body iframe,
+.article-body embed,
+.article-body object,
+.article-body figure,
+.article-body table,
+.article-body pre { max-width: 100%; }
+.article-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+
+/* ---------- article photo gallery ---------- */
+
+.article-gallery {
+  margin: 2rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+.gallery-title {
+  font-family: var(--body);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 1rem;
+  color: var(--ink);
+  margin: 0 0 1rem;
+  padding-left: 0.75rem;
+  position: relative;
+}
+.gallery-title::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 4px;
+  background: var(--brand-red);
+  border-radius: 2px;
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+.gallery-item {
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--line);
+}
+.gallery-item a { display: block; width: 100%; height: 100%; }
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 300ms ease;
+}
+.gallery-item:hover img { transform: scale(1.05); }
 
 .tag-row {
   display: flex;
@@ -1213,9 +1308,35 @@ main > .site-wrap > section { margin-top: 2rem; }
   .masthead-search { min-width: 100%; }
   .card-grid { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; }
-  .article-main { padding: 1.2rem 1.1rem 1.5rem; }
+  .article-main { padding: 1.1rem 0.95rem 1.4rem; }
   .utility-inner { flex-wrap: wrap; }
   .util-right { width: 100%; display: flex; justify-content: flex-start; }
+
+  /* Tighter hero / article / aside on phones so nothing overflows. */
+  .hero-title { font-size: 1.5rem; line-height: 1.15; }
+  .hero-excerpt { font-size: 0.95rem; }
+  .hero-body { padding: 0.95rem 1rem 1.15rem; }
+  .hero-aside { padding: 0.25rem 0.9rem 0.5rem; }
+  .article-title { font-size: 1.55rem; }
+  .article-subtitle { font-size: 0.98rem; }
+  .article-byline { gap: 0.5rem; padding: 0.6rem 0; }
+  .byline-left { gap: 0.55rem; }
+  .byline-avatar { width: 36px; height: 36px; font-size: 0.8rem; }
+  .article-body { font-size: 1rem; line-height: 1.7; }
+  .article-body img { margin: 0.6rem auto; }
+  .article-hero img { max-height: 320px; }
+  /* Keep carousel arrows at WCAG 44×44 touch target on mobile. */
+  .carousel-arrow { width: 44px; height: 44px; }
+  .section-head { margin: 1.4rem 0 0.75rem; }
+  .section-title { font-size: 0.95rem; }
+  .top-stories li { padding: 0.6rem 0; grid-template-columns: 22px 1fr 44px; gap: 0.55rem; }
+  .top-thumb { width: 44px; height: 44px; }
+  .top-title { font-size: 0.9rem; }
+  .breadcrumbs { font-size: 0.78rem; margin-top: 0.8rem; }
+  .breadcrumbs .crumb-current { max-width: 70vw; }
+  .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.55rem; }
+  .page-title { font-size: 1.8rem; }
+  .page-title-block { margin: 1rem 0 1.25rem; padding-bottom: 0.75rem; }
 }
 
 @media (max-width: 480px) {

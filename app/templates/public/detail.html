@@ -41,8 +41,7 @@
                 <p class="byline-name">DSVV Newsroom</p>
                 <p class="byline-meta">
                   {% if post.published_at %}{{ post.published_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
-                  <span class="meta-sep" aria-hidden="true">·</span>
-                  {{ post.view_count }} views
+                  {% if post.view_count %}<span class="meta-sep" aria-hidden="true">·</span>{{ post.view_count }} views{% endif %}
                 </p>
               </div>
             </div>
@@ -79,6 +78,29 @@
           <div class="article-body">
             {{ post.content|safe }}
           </div>
+
+          {# Skip the featured image so it isn't shown twice (hero + gallery).
+             MongoEngine documents compare by id so `reject equalto` works. #}
+          {% set extras = (post.gallery or []) | reject('equalto', post.featured_image) | list %}
+          {% if extras %}
+          <section class="article-gallery" aria-label="Photo gallery">
+            <h3 class="gallery-title">Photos</h3>
+            <div class="gallery-grid">
+              {% for g in extras %}
+              <figure class="gallery-item">
+                <a href="{{ g.url }}" target="_blank" rel="noopener" aria-label="Open photo {{ loop.index }} of {{ extras|length }} in full size">
+                  <img src="{{ cld_url(g, width=640, height=480) }}"
+                       srcset="{{ cld_srcset(g, ref_width=640, ref_height=480) }}"
+                       sizes="(max-width: 600px) 45vw, 240px"
+                       width="640" height="480"
+                       alt="{{ g.alt_text or ('Photo ' ~ loop.index) }}"
+                       loading="lazy" decoding="async" />
+                </a>
+              </figure>
+              {% endfor %}
+            </div>
+          </section>
+          {% endif %}
 
           {% if post.tags %}
           <div class="tag-row" aria-label="Tags">

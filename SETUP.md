@@ -99,8 +99,6 @@ running `scripts/seed.py`.
 
 - MongoEngine creates indexes lazily on first query — no migrations needed.
 - Collections are created on demand; there is no schema file to apply.
-- The legacy SQLite file at `instance/dsvv_news.db` is obsolete and can be
-  deleted.
 
 ## Quick MongoDB sanity check
 

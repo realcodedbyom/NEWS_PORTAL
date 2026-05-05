@@ -37,7 +37,8 @@
   <div class="site-wrap nav-inner">
     <a href="{{ url_for('web.news_home') }}"
        class="nav-item {% if request.endpoint == 'web.news_home' %}active{% endif %}">Home</a>
-    {% for c in categories %}
+    {# Show only categories that actually have live posts — avoids dead tabs. #}
+    {% for c in (nav_categories or categories) %}
       <a href="{{ url_for('web.news_category', category=c) }}"
          class="nav-item {% if active_category == c %}active{% endif %}">{{ c|replace('_',' ')|title }}</a>
     {% endfor %}

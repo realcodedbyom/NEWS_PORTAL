@@ -1,16 +1,63 @@
-# v0 sandbox internal files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-.snowflake/
-.v0-trash/
-.vercel/
-next.user-config.*
+# ---------------------------------------------------------------------------
+# DSVV News — .gitignore  (Python / Flask / MongoDB)
+# ---------------------------------------------------------------------------
 
-# Environment variables
-.env*.local
+# --- Secrets ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
 
-# Common ignores
-node_modules
-.next/
+# --- Python bytecode / build artefacts -------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Virtual environments --------------------------------------------------
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# --- Flask runtime / local data --------------------------------------------
+instance/
+uploads/
+
+# --- Tooling caches --------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# --- Editors / IDEs --------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS junk ---------------------------------------------------------------
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Node (only if JS tooling is ever added) -------------------------------
+node_modules/
+package.json
+package-lock.json
+
+# --- Scratch / debug dumps -------------------------------------------------
+_*.txt
+_*.html
+*.log

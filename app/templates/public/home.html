@@ -47,10 +47,14 @@
                     {% endif %}
                     <p class="story-meta">
                       <span>By DSVV Newsroom</span>
-                      <span class="meta-sep" aria-hidden="true">·</span>
-                      {% if p.published_at %}<span>{{ p.published_at.strftime('%d %b %Y, %I:%M %p') }}</span>{% endif %}
-                      <span class="meta-sep" aria-hidden="true">·</span>
-                      <span>{{ p.view_count }} views</span>
+                      {% if p.published_at %}
+                        <span class="meta-sep" aria-hidden="true">·</span>
+                        <span>{{ p.published_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+                      {% endif %}
+                      {% if p.view_count %}
+                        <span class="meta-sep" aria-hidden="true">·</span>
+                        <span>{{ p.view_count }} views</span>
+                      {% endif %}
                     </p>
                   </div>
                 </li>

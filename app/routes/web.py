@@ -97,12 +97,35 @@ def roles_required(*role_names: str):
     return decorator
 
 
+def _nav_categories() -> list[str]:
+    """Categories (in canonical order) that actually have a live post.
+
+    Falls back to the full category list on any error so the nav never
+    renders empty. Callers should gate the invocation so we don't do a
+    distinct() query on admin/API pages that don't render the public
+    header.
+    """
+    try:
+        populated = set(_live_posts_base_query().distinct("category"))
+        nav = [c for c in PostCategory.values() if c in populated]
+    except Exception:
+        nav = list(PostCategory.values())
+    return nav or list(PostCategory.values())
+
+
 @web_bp.app_context_processor
 def _inject_globals():
     user = _current_user()
     # Cheap unread-count query so the bell badge stays in sync without
     # every view having to pass it explicitly.
     unread = NotificationService.unread_count(user) if user else 0
+    # Only run the populated-categories query for newsroom pages — saves
+    # an extra distinct() on every CMS / alumni / user render.
+    endpoint = request.endpoint or ""
+    if endpoint.startswith("web.news_") or endpoint in {"web.index", "web.public_submit"}:
+        nav_categories = _nav_categories()
+    else:
+        nav_categories = list(PostCategory.values())
     return {
         "current_user": user,
         "now": datetime.utcnow(),
@@ -110,6 +133,7 @@ def _inject_globals():
         "PostCategory": PostCategory,
         "RoleName": RoleName,
         "unread_notifications_count": unread,
+        "nav_categories": nav_categories,
     }
 
 

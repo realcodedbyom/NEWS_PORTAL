@@ -143,7 +143,9 @@ News_portal/
 │   └── static/css/            # public.css (News18 theme), main.css (admin)
 ├── docs/
 │   └── screenshots/            # README images (see Screenshots section)
-├── scripts/seed.py            # Roles + admin + 12 demo posts
+├── scripts/
+│   ├── seed.py                # Roles + bootstrap admin (idempotent)
+│   └── scrape_awgp.py         # Import real DSVV news from awgp.org → Cloudinary
 ├── run.py                     # Dev server entry
 ├── wsgi.py                    # Gunicorn entry
 ├── requirements.txt
@@ -186,9 +188,14 @@ copy .env.example .env
 ### 5. Seed & run
 
 ```powershell
-python scripts/seed.py
+python scripts/seed.py         # creates roles + bootstrap admin
 python run.py
 ```
+
+> The seed script is intentionally minimal — no dummy content is created. To
+> pre-populate the site with real articles, either import from awgp.org (see
+> [Seed Data](#seed-data) below) or create posts via the CMS at
+> <http://localhost:8000/login>.
 
 Open <http://localhost:8000>. Log in at `/login` with:
 
@@ -349,13 +356,44 @@ See `app/routes/` for the full surface.
 
 ## Seed Data
 
-`scripts/seed.py` ensures the app is usable on first boot:
+### Minimal seed (`scripts/seed.py`)
+
+Idempotent boot-strap — run it on first install and it's safe to re-run:
 
 1. Creates the three roles (`writer`, `editor`, `admin`).
-2. Creates a bootstrap admin user.
-3. Seeds **12 DSVV-themed demo posts** across all 6 categories so the News18-style homepage isn't empty.
+2. Creates a bootstrap admin user (credentials in `.env`).
 
-Skip the demo posts with `SEED_DEMO_POSTS=false python scripts/seed.py`. Re-running the script is idempotent — it won't duplicate content.
+```powershell
+python scripts/seed.py           # roles + admin only
+python scripts/seed.py --awgp    # seed + import 50 latest awgp.org articles
+```
+
+Environment equivalents:
+
+- `SEED_FROM_AWGP=true python scripts/seed.py` — same as `--awgp`
+
+### Real content import (`scripts/scrape_awgp.py`)
+
+Scrapes the 50 latest articles from <https://www.awgp.org/en/news>, mirrors every image to your Cloudinary account, sanitizes the HTML (bleach strips `<script>`, `<iframe>`, `on*` handlers and awgp.org-specific UI widgets), classifies each story into one of the six DSVV categories, and writes it into MongoDB as a published `Post`.
+
+```powershell
+python scripts/scrape_awgp.py              # 50 articles, wipes existing
+python scripts/scrape_awgp.py --limit 20   # fewer articles
+python scripts/scrape_awgp.py --no-wipe    # keep existing posts, append new
+python scripts/scrape_awgp.py --quiet      # suppress per-item progress logs
+```
+
+All imported articles are attributed to the bootstrap admin user — there's no per-run author override.
+
+**What it does under the hood:**
+
+- CSRF-aware pagination via awgp.org's `getNewsHtml` AJAX endpoint
+- Session-based image fetch (Referer + User-Agent spoof) to bypass the site's hotlink protection, then uploads bytes to Cloudinary under `<CLOUDINARY_UPLOAD_FOLDER>/awgp/`
+- BeautifulSoup rewrite: every `<img src="…awgp.org/…">` is replaced with its Cloudinary mirror; `srcset`/`data-src` are stripped; `<img>` tags that fail to upload are decomposed so no broken links ship
+- HTML sanitization with `bleach` using a strict tag/attr/protocol whitelist
+- Cloudinary rows are created per image so the media library picks them up automatically
+
+> Running **wipes all existing posts + media** by default — it's meant for a clean slate. Use `--no-wipe` to append.
 
 ## Development
 

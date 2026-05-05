@@ -55,8 +55,7 @@
             {% if p.excerpt %}<p class="card-excerpt">{{ p.excerpt }}</p>{% endif %}
             <p class="card-meta">
               {% if p.published_at %}{{ p.published_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
-              <span class="meta-sep" aria-hidden="true">·</span>
-              {{ p.view_count }} views
+              {% if p.view_count %}<span class="meta-sep" aria-hidden="true">·</span>{{ p.view_count }} views{% endif %}
             </p>
           </div>
         </article>
