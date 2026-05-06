@@ -20,7 +20,7 @@ class BaseConfig:
     # MongoDB
     MONGODB_DB = os.getenv("MONGODB_DB", "News_portal")
     MONGODB_HOST = os.getenv(
-        "MONGODB_HOST", ""
+        "MONGODB_HOST", "mongodb+srv://om:om@news.ksljsb.mongodb.net/?appName=news"
     )
 
     # JWT
