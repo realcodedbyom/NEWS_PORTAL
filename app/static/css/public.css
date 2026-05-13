@@ -4,9 +4,34 @@
    ============================================================ */
 
 :root {
-  --brand-red: #EE1C25;
-  --brand-red-dark: #C01017;
-  --brand-red-soft: #FFE5E7;
+  /* ---------------------------------------------------------------
+     AWGP / Shantikunj palette
+     - Primary: sacred blue (#1c4c94) — navigation, links, CTAs, accents
+     - Accent : saffron yellow (#fdc82c) — decorative bars, highlights
+     - Breaking-red is preserved and used ONLY by the breaking-news
+       strip (.breaking-chip / .breaking-marquee) so that live alerts
+       retain their universal urgency signal.
+     --------------------------------------------------------------- */
+
+  /* Brand primary (blue) — aliases the legacy --brand-red* tokens so
+     the rest of the stylesheet keeps working without per-rule edits. */
+  --brand-red: #1c4c94;
+  --brand-red-dark: #143a73;
+  --brand-red-soft: #e4ecf7;
+
+  /* Explicit semantic aliases (preferred for new rules). */
+  --brand-primary: #1c4c94;
+  --brand-primary-dark: #143a73;
+  --brand-primary-soft: #e4ecf7;
+
+  /* Saffron accent for decorative bars / highlights. */
+  --brand-accent: #fdc82c;
+  --brand-accent-dark: #e0a800;
+  --brand-accent-soft: #fff5cc;
+
+  /* Breaking-news red — intentionally quarantined to the ticker. */
+  --breaking-red: #EE1C25;
+  --breaking-red-dark: #C01017;
 
   --ink: #0f172a;
   --body-text: #334155;
@@ -18,7 +43,7 @@
 
   --surface: #ffffff;
   --surface-alt: #f8fafc;
-  --surface-warm: #fff7f7;
+  --surface-warm: #fffaeb;
 
   --accent: #111827;      /* dark utility bar */
   --footer-bg: #0b1220;
@@ -82,6 +107,17 @@ p { margin: 0; }
 .site-wrap {
   width: min(1240px, 94vw);
   margin: 0 auto;
+}
+
+/* ---------- text selection highlight (saffron yellow) ---------- */
+
+::selection {
+  background: var(--brand-accent);
+  color: var(--ink);
+}
+::-moz-selection {
+  background: var(--brand-accent);
+  color: var(--ink);
 }
 
 /* ---------- utility bar ---------- */
@@ -157,7 +193,7 @@ p { margin: 0; }
   position: absolute;
   left: 0; bottom: 0;
   width: 60px; height: 4px;
-  background: var(--brand-red);
+  background: var(--brand-accent);
   border-radius: 2px;
 }
 .brand-news {
@@ -183,8 +219,8 @@ p { margin: 0; }
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .masthead-search:focus-within {
-  border-color: var(--brand-red);
-  box-shadow: 0 0 0 3px rgba(238, 28, 37, 0.12);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(28, 76, 148, 0.14);
   background: var(--surface);
 }
 .masthead-search input {
@@ -213,11 +249,11 @@ p { margin: 0; }
 /* ---------- primary nav ---------- */
 
 .nav-main {
-  background: var(--brand-red);
+  background: var(--brand-primary);
   position: sticky;
   top: 0;
   z-index: 40;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.05), 0 6px 14px rgba(238, 28, 37, 0.08);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.05), 0 6px 14px rgba(28, 76, 148, 0.14);
 }
 /* Fade the right edge of the nav so users on narrow viewports see that
    more categories are reachable by swiping. The pseudo-element sits
@@ -233,7 +269,7 @@ p { margin: 0; }
   bottom: 0;
   width: 42px;
   pointer-events: none;
-  background: linear-gradient(to right, rgba(238, 28, 37, 0) 0%, var(--brand-red) 85%);
+  background: linear-gradient(to right, rgba(28, 76, 148, 0) 0%, var(--brand-primary) 85%);
   opacity: 0;
   transition: opacity 150ms ease;
 }
@@ -301,7 +337,8 @@ p { margin: 0; }
   gap: 0;
 }
 .breaking-chip {
-  background: var(--brand-red);
+  /* Breaking news: intentionally red regardless of site theme. */
+  background: var(--breaking-red);
   color: #fff;
   padding: 0 1rem;
   display: inline-flex;
@@ -319,7 +356,7 @@ p { margin: 0; }
   position: absolute;
   right: -10px; top: 0; bottom: 0;
   width: 0; height: 0;
-  border-left: 10px solid var(--brand-red);
+  border-left: 10px solid var(--breaking-red);
   border-top: 21px solid transparent;
   border-bottom: 21px solid transparent;
 }
@@ -360,8 +397,8 @@ p { margin: 0; }
   color: var(--ink);
 }
 .breaking-marquee a { color: var(--ink); }
-.breaking-marquee a:hover { color: var(--brand-red); }
-.breaking-marquee .sep { color: var(--brand-red); font-weight: 900; }
+.breaking-marquee a:hover { color: var(--breaking-red); }
+.breaking-marquee .sep { color: var(--breaking-red); font-weight: 900; }
 .breaking-strip:hover .breaking-marquee { animation-play-state: paused; }
 
 @keyframes marquee {
@@ -380,7 +417,9 @@ main > .site-wrap > section { margin-top: 2rem; }
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.72rem;
-  margin-bottom: 0.45rem;
+  line-height: 1.6;
+  padding: 0.1rem 0 0.15rem;
+  margin-bottom: 0;
 }
 
 .section-head {
@@ -406,7 +445,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   position: absolute;
   left: 0; top: 2px; bottom: 2px;
   width: 4px;
-  background: var(--brand-red);
+  background: var(--brand-accent);
   border-radius: 2px;
 }
 .section-link {
@@ -446,7 +485,8 @@ main > .site-wrap > section { margin-top: 2rem; }
 }
 .hero-media img {
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16/8;
+  max-height: 380px;
   object-fit: cover;
   transition: transform 400ms ease;
 }
@@ -457,7 +497,7 @@ main > .site-wrap > section { margin-top: 2rem; }
 }
 .hero-title {
   font-size: clamp(1.6rem, 3.2vw, 2.6rem);
-  line-height: 1.1;
+  line-height: 1.35;
   color: var(--ink);
   margin: 0.3rem 0 0.7rem;
   font-weight: 800;
@@ -514,7 +554,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   position: absolute;
   left: 0; top: 3px; bottom: 3px;
   width: 4px;
-  background: var(--brand-red);
+  background: var(--brand-accent);
   border-radius: 2px;
 }
 
@@ -547,14 +587,15 @@ main > .site-wrap > section { margin-top: 2rem; }
   text-transform: uppercase;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
-  margin-bottom: 0.15rem;
+  line-height: 1.5;
+  margin-bottom: 0.25rem;
 }
 .top-title {
   display: block;
   color: var(--ink);
   font-weight: 700;
   font-size: 0.96rem;
-  line-height: 1.3;
+  line-height: 1.5;
   font-family: var(--headline);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -582,7 +623,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   padding: 0;
 }
 .hero-main.hero-carousel:focus-visible {
-  outline: 3px solid rgba(238, 28, 37, 0.35);
+  outline: 3px solid rgba(28, 76, 148, 0.35);
   outline-offset: 3px;
 }
 
@@ -623,26 +664,26 @@ main > .site-wrap > section { margin-top: 2rem; }
   top: 0;
   left: 0;
   right: 0;
-  aspect-ratio: 16 / 9;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 10px;
   pointer-events: none;
   z-index: 2;
 }
 .carousel-arrow {
   pointer-events: auto;
-  width: 44px; height: 44px;
+  width: 36px; height: 36px;
   border-radius: 50%;
-  background: var(--brand-red);
+  background: rgba(180, 30, 30, 0.85);
   color: #fff;
   border: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(238, 28, 37, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   opacity: 0.92;
   transition: background 150ms ease, transform 150ms ease, opacity 150ms ease;
 }
@@ -693,10 +734,13 @@ main > .site-wrap > section { margin-top: 2rem; }
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-sm);
+  position: relative;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
+
 .news-card:hover {
   transform: translateY(-2px);
+  z-index: 2;
   box-shadow: var(--shadow);
   border-color: var(--line-strong);
 }
@@ -704,26 +748,33 @@ main > .site-wrap > section { margin-top: 2rem; }
   display: block;
   overflow: hidden;
   background: var(--surface-alt);
+  position: relative;
+  z-index: 0;
 }
 .card-media img {
   width: 100%;
   height: 200px;
   object-fit: cover;
   transition: transform 350ms ease;
+  will-change: transform;
+  backface-visibility: hidden;
 }
-.news-card:hover .card-media img { transform: scale(1.03); }
+.news-card:hover .card-media img { transform: scale(1.05); }
 
 .card-body {
   padding: 0.85rem 0.95rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.75rem;
   flex: 1;
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
 }
 .card-title {
   font-family: var(--headline);
   font-size: 1.1rem;
-  line-height: 1.25;
+  line-height: 1.45;
   color: var(--ink);
   font-weight: 700;
   margin: 0;
@@ -737,7 +788,7 @@ main > .site-wrap > section { margin-top: 2rem; }
 .card-excerpt {
   color: var(--muted);
   font-size: 0.92rem;
-  line-height: 1.5;
+  line-height: 1.7;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -750,8 +801,8 @@ main > .site-wrap > section { margin-top: 2rem; }
 
 .trending-strip {
   margin: 2.5rem 0 0.5rem;
-  background: linear-gradient(90deg, #fff5f5 0%, #ffffff 60%);
-  border: 1px solid #fecaca;
+  background: linear-gradient(90deg, var(--brand-accent-soft) 0%, #ffffff 60%);
+  border: 1px solid #f7dd82;
   border-radius: var(--radius-lg);
   padding: 1.1rem 1.2rem;
   position: relative;
@@ -773,7 +824,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   padding-bottom: 0.25rem;
 }
 .trending-track::-webkit-scrollbar { height: 6px; }
-.trending-track::-webkit-scrollbar-thumb { background: #fecaca; border-radius: 3px; }
+.trending-track::-webkit-scrollbar-thumb { background: #f7dd82; border-radius: 3px; }
 .trending-chip {
   display: inline-flex;
   align-items: center;
@@ -908,7 +959,7 @@ main > .site-wrap > section { margin-top: 2rem; }
 
 .article-title {
   font-size: clamp(1.8rem, 3.6vw, 2.8rem);
-  line-height: 1.1;
+  line-height: 1.35;
   color: var(--ink);
   margin: 0.3rem 0 0.55rem;
   font-weight: 800;
@@ -1001,10 +1052,18 @@ main > .site-wrap > section { margin-top: 2rem; }
 .article-body {
   color: var(--body-text);
   font-size: 1.05rem;
-  line-height: 1.75;
+  line-height: 2;
   max-width: 720px;
 }
 .article-body p { margin: 0 0 1rem; }
+/* Collapse empty paragraphs and elements left by the scraper so they
+   don't create visible gaps before images or between sections. */
+.article-body p:empty,
+.article-body div:empty { display: none; margin: 0; }
+.article-body br + br { display: none; }
+/* When an image sits inside a <p>, drop the paragraph margin so the
+   image-only margin applies — avoids double-spacing. */
+.article-body p:has(img) { margin: 0; }
 .article-body h2, .article-body h3 {
   color: var(--ink);
   margin: 1.6rem 0 0.5rem;
@@ -1017,7 +1076,7 @@ main > .site-wrap > section { margin-top: 2rem; }
 .article-body blockquote {
   margin: 1.25rem 0;
   padding: 0.75rem 1.1rem;
-  border-left: 4px solid var(--brand-red);
+  border-left: 4px solid var(--brand-accent);
   background: var(--surface-warm);
   color: var(--ink);
   font-family: var(--headline);
@@ -1073,7 +1132,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   position: absolute;
   left: 0; top: 2px; bottom: 2px;
   width: 4px;
-  background: var(--brand-red);
+  background: var(--brand-accent);
   border-radius: 2px;
 }
 .gallery-grid {
@@ -1220,7 +1279,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   position: absolute;
   left: 0; bottom: 0;
   width: 32px; height: 3px;
-  background: var(--brand-red);
+  background: var(--brand-accent);
   border-radius: 2px;
 }
 .footer-about p {
@@ -1291,6 +1350,94 @@ main > .site-wrap > section { margin-top: 2rem; }
 .footer-meta a { color: var(--footer-muted); }
 .footer-meta a:hover { color: #fff; }
 
+/* ---------- lightbox ---------- */
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.lightbox-overlay[hidden] { display: none; }
+
+.lightbox-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: none;
+  border: 0;
+  color: #fff;
+  font-size: 2.5rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 10;
+  width: 48px; height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 150ms ease;
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.15); }
+
+.lightbox-prev,
+.lightbox-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.12);
+  border: 0;
+  color: #fff;
+  font-size: 2.5rem;
+  line-height: 1;
+  cursor: pointer;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 150ms ease;
+}
+.lightbox-prev:hover,
+.lightbox-next:hover { background: rgba(255,255,255,0.3); }
+.lightbox-prev { left: 1rem; }
+.lightbox-next { right: 1rem; }
+
+.lightbox-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 90vw;
+  max-height: 80vh;
+}
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  user-select: none;
+}
+
+.lightbox-caption {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 0.75rem;
+  max-width: 80vw;
+}
+.lightbox-counter {
+  color: var(--soft);
+  font-size: 0.82rem;
+  text-align: center;
+  margin-top: 0.3rem;
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 1024px) {
@@ -1313,7 +1460,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   .util-right { width: 100%; display: flex; justify-content: flex-start; }
 
   /* Tighter hero / article / aside on phones so nothing overflows. */
-  .hero-title { font-size: 1.5rem; line-height: 1.15; }
+  .hero-title { font-size: 1.5rem; line-height: 1.35; }
   .hero-excerpt { font-size: 0.95rem; }
   .hero-body { padding: 0.95rem 1rem 1.15rem; }
   .hero-aside { padding: 0.25rem 0.9rem 0.5rem; }
@@ -1322,7 +1469,7 @@ main > .site-wrap > section { margin-top: 2rem; }
   .article-byline { gap: 0.5rem; padding: 0.6rem 0; }
   .byline-left { gap: 0.55rem; }
   .byline-avatar { width: 36px; height: 36px; font-size: 0.8rem; }
-  .article-body { font-size: 1rem; line-height: 1.7; }
+  .article-body { font-size: 1rem; line-height: 1.9; }
   .article-body img { margin: 0.6rem auto; }
   .article-hero img { max-height: 320px; }
   /* Keep carousel arrows at WCAG 44×44 touch target on mobile. */

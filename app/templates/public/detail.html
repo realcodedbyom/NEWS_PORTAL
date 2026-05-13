@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ post.title }} · DSVV News</title>
   {% if post.excerpt %}<meta name="description" content="{{ post.excerpt }}" />{% endif %}
-  <meta name="theme-color" content="#EE1C25" />
+  <meta name="theme-color" content="#1c4c94" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
@@ -87,15 +87,14 @@
             <h3 class="gallery-title">Photos</h3>
             <div class="gallery-grid">
               {% for g in extras %}
-              <figure class="gallery-item">
-                <a href="{{ g.url }}" target="_blank" rel="noopener" aria-label="Open photo {{ loop.index }} of {{ extras|length }} in full size">
-                  <img src="{{ cld_url(g, width=640, height=480) }}"
-                       srcset="{{ cld_srcset(g, ref_width=640, ref_height=480) }}"
-                       sizes="(max-width: 600px) 45vw, 240px"
-                       width="640" height="480"
-                       alt="{{ g.alt_text or ('Photo ' ~ loop.index) }}"
-                       loading="lazy" decoding="async" />
-                </a>
+              <figure class="gallery-item" data-lightbox>
+                <img src="{{ cld_url(g, width=640, height=480) }}"
+                     data-full="{{ cld_url(g, width=1200, height=900) }}"
+                     srcset="{{ cld_srcset(g, ref_width=640, ref_height=480) }}"
+                     sizes="(max-width: 600px) 45vw, 240px"
+                     width="640" height="480"
+                     alt="{{ g.alt_text or ('Photo ' ~ loop.index) }}"
+                     loading="lazy" decoding="async" />
               </figure>
               {% endfor %}
             </div>
@@ -172,5 +171,124 @@
   </main>
 
   {% include 'public/_footer.html' %}
+
+  {# Lightbox overlay — no external deps, pure CSS + vanilla JS #}
+  <div class="lightbox-overlay" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" hidden>
+    <button class="lightbox-close" aria-label="Close image viewer">&times;</button>
+    <button class="lightbox-prev" aria-label="Previous image">&#8249;</button>
+    <button class="lightbox-next" aria-label="Next image">&#8250;</button>
+    <div class="lightbox-body">
+      <img class="lightbox-img" src="" alt="" />
+    </div>
+    <div class="lightbox-caption"></div>
+    <div class="lightbox-counter"></div>
+  </div>
+
+  <script>
+  (function(){
+    /* Collect all lightbox-enabled images on the page */
+    var overlay = document.getElementById('lightbox');
+    if (!overlay) return;
+
+    var lbImg     = overlay.querySelector('.lightbox-img');
+    var lbCaption = overlay.querySelector('.lightbox-caption');
+    var lbCounter = overlay.querySelector('.lightbox-counter');
+    var btnClose  = overlay.querySelector('.lightbox-close');
+    var btnPrev   = overlay.querySelector('.lightbox-prev');
+    var btnNext   = overlay.querySelector('.lightbox-next');
+
+    /* Gather images: hero + gallery + article body images */
+    var items = [];
+
+    /* Hero image */
+    var hero = document.querySelector('.article-hero img');
+    if (hero) items.push({ src: hero.src, alt: hero.alt || '' });
+
+    /* Gallery items — prefer data-full for higher res */
+    document.querySelectorAll('.gallery-item[data-lightbox] img').forEach(function(img){
+      items.push({ src: img.getAttribute('data-full') || img.src, alt: img.alt || '' });
+    });
+
+    /* Inline images inside article body */
+    document.querySelectorAll('.article-body img').forEach(function(img){
+      /* Use the natural src if it's already large enough, or the same src */
+      items.push({ src: img.src, alt: img.alt || '' });
+    });
+
+    if (items.length === 0) return;
+
+    var current = 0;
+
+    function show(idx){
+      current = ((idx % items.length) + items.length) % items.length;
+      lbImg.src = items[current].src;
+      lbImg.alt = items[current].alt;
+      lbCaption.textContent = items[current].alt;
+      lbCounter.textContent = items.length > 1 ? (current + 1) + ' / ' + items.length : '';
+    }
+
+    function open(idx){
+      show(idx);
+      overlay.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+
+    function close(){
+      overlay.hidden = true;
+      document.body.style.overflow = '';
+      lbImg.src = '';
+    }
+
+    /* Click handlers on images */
+    var globalIdx = 0;
+
+    if (hero) {
+      hero.style.cursor = 'zoom-in';
+      hero.addEventListener('click', function(){ open(0); });
+      globalIdx = 1;
+    }
+
+    document.querySelectorAll('.gallery-item[data-lightbox] img').forEach(function(img){
+      var idx = globalIdx;
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', function(){ open(idx); });
+      globalIdx++;
+    });
+
+    document.querySelectorAll('.article-body img').forEach(function(img){
+      var idx = globalIdx;
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', function(){ open(idx); });
+      globalIdx++;
+    });
+
+    /* Navigation */
+    btnClose.addEventListener('click', close);
+    btnPrev.addEventListener('click', function(){ show(current - 1); });
+    btnNext.addEventListener('click', function(){ show(current + 1); });
+
+    overlay.addEventListener('click', function(e){
+      if (e.target === overlay || e.target.classList.contains('lightbox-body')) close();
+    });
+
+    document.addEventListener('keydown', function(e){
+      if (overlay.hidden) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') show(current - 1);
+      else if (e.key === 'ArrowRight') show(current + 1);
+    });
+
+    /* Touch swipe support */
+    var touchStartX = 0;
+    overlay.addEventListener('touchstart', function(e){ touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+    overlay.addEventListener('touchend', function(e){
+      var diff = e.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) show(current - 1);
+        else show(current + 1);
+      }
+    }, {passive: true});
+  })();
+  </script>
 </body>
 </html>

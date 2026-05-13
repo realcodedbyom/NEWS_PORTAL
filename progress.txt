@@ -1,0 +1,83 @@
+# Progress Log — 13 May 2026
+
+## Summary of Changes
+
+All changes were made to the News Portal project (DSVV News, Haridwar).
+
+---
+
+### 1. Yellow Text Selection Highlight
+- Added `::selection` CSS rule in `app/static/css/public.css`
+- Text selection now highlights in yellow (`#ffe066`) with dark text (`#1a1a1a`)
+- Provides a branded, readable selection experience
+
+---
+
+### 2. Fixed Empty Space Before Photos
+- Removed unnecessary padding/margin causing blank gaps above article images
+- Ensured images sit flush within their containers
+
+---
+
+### 3. Image Lightbox Gallery (Detail Page)
+- Added a lightbox overlay for article images on the detail page
+- Clicking an image opens it in a full-screen modal with smooth fade animation
+- Close via ✕ button, `Escape` key, or clicking the dark backdrop
+- **No Cloudinary URL leak** — lightbox uses the same image URL already on the page
+- Navigation between multiple images in the gallery
+- Touch-friendly and keyboard accessible
+
+---
+
+### 4. Hindi/Devanagari Matra Overlapping Fix
+- Increased `line-height` values across the site to accommodate Devanagari script matras (ि, े, ो, ं, ः, etc.) that extend above and below the baseline
+- **`.article-body`**: `1.75` → `2.0` (desktop), `1.7` → `1.9` (mobile)
+- **`.hero-title`**: `1.1` → `1.35`
+- **`.article-title`**: `1.1` → `1.35`
+- **`.top-title`**: `1.3` → `1.5`
+- **`.card-title`**: `1.25` → `1.45`
+- **`.card-excerpt`**: `1.5` → `1.7`
+- **Mobile `.hero-title`**: `1.15` → `1.35`
+
+---
+
+### 5. Card Hover Image Overlap Fix
+- News cards on the home page had image zoom on hover (`scale(1.05)`) that caused overlap with text below
+- **Fixes applied:**
+  - `.news-card`: Added `position: relative`, `overflow: hidden`, `z-index: 2` on hover
+  - `.card-media`: `overflow: hidden`, `z-index: 0` — image container clips zoomed content
+  - `.card-body`: `position: relative`, `z-index: 1`, `background: var(--surface)` — text area has opaque background and sits above image
+  - `.card-media img`: Added `will-change: transform`, `backface-visibility: hidden` — GPU-accelerated compositing
+  - **Hover zoom preserved** — image still scales on hover, but stays within bounds
+  - Card body gap increased from `0.35rem` → `0.75rem` for better element spacing
+  - Kicker (category label): Added `line-height: 1.6`, padding — prevents text overlap with title
+
+---
+
+### 6. Hero Carousel Image Height Fix
+- The hero/left carousel was too tall due to `aspect-ratio: 16/9`
+- **Changed to `aspect-ratio: 16/8`** — less vertical space
+- **Added `max-height: 380px`** — caps image height so it doesn't dominate the page layout
+- Applied to both `.hero-media img` and `.carousel-slide .hero-media img`
+
+---
+
+### 7. Carousel Arrow Button Position Fix
+- Prev/Next (`<` `>`) buttons were not properly positioned on the carousel
+- **Fixed overlay**: Changed from `aspect-ratio: 16/9` to `height: 100%` — arrows now span full carousel and center vertically
+- **Reduced arrow size**: `44px` → `36px` — less intrusive on the image
+- **Semi-transparent background**: `rgba(180, 30, 30, 0.85)` — blends with the image
+- **Subtler shadow**: `0 4px 12px rgba(0, 0, 0, 0.25)`
+- **Tighter padding**: `14px` → `10px` — arrows closer to edges
+
+---
+
+## Files Modified
+- `app/static/css/public.css` — All CSS changes (line-heights, card stacking, carousel sizing, arrows)
+- `app/templates/public/detail.html` — Lightbox gallery HTML/JS
+- `app/templates/public/_footer.html` — (if any footer-related changes)
+- `progress.txt` — This file (new)
+
+---
+
+*End of progress log — 13 May 2026*
