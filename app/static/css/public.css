@@ -1448,7 +1448,8 @@ main > .site-wrap > section { margin-top: 2rem; }
   display: none;
 }
 .mobile-topbar,
-.mobile-menu-overlay {
+.mobile-menu-overlay,
+.mobile-detail-bar {
   display: none;
 }
 
@@ -1717,16 +1718,6 @@ main > .site-wrap > section { margin-top: 2rem; }
   }
 
   /* ---------- MOBILE DETAIL PAGE BAR ---------- */
-  .mobile-detail-bar {
-    display: none;
-  }
-
-  /* Hide desktop header on mobile for detail pages */
-  body:not(.has-mobile-feed) .utility-bar { }
-  body:not(.has-mobile-feed) .masthead { }
-  body:not(.has-mobile-feed) .nav-main { }
-  body:not(.has-mobile-feed) .breaking-strip { }
-
   .mobile-detail-bar {
     display: flex;
     position: fixed;
