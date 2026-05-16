@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('web.static', filename='css/public.css') }}" />
 </head>
-<body>
+<body class="has-mobile-feed">
   {% include 'public/_header.html' %}
 
   <main id="main">
@@ -211,6 +211,109 @@
     </div>
   </main>
 
+  {# ---------- MOBILE TOP BAR (fixed, with burger menu) ---------- #}
+  <div class="mobile-topbar" id="mobileTopbar">
+    <button class="mobile-burger" id="mobileBurger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="{{ url_for('web.news_home') }}" class="mobile-topbar-brand">Dsvv<span>News</span></a>
+    <div style="width:44px;"></div>
+  </div>
+  <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+    <nav class="mobile-menu" id="mobileMenu">
+      <a href="{{ url_for('web.news_home') }}" class="mobile-menu-item {% if request.endpoint == 'web.news_home' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </a>
+      {% for c in (nav_categories or categories) %}
+        <a href="{{ url_for('web.news_category', category=c) }}" class="mobile-menu-item {% if active_category == c %}active{% endif %}">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/></svg>
+          {{ c|replace('_',' ')|title }}
+        </a>
+      {% endfor %}
+      <a href="{{ url_for('web.news_search') }}" class="mobile-menu-item">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search
+      </a>
+      <a href="{{ url_for('web.login') }}" class="mobile-menu-item">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Share Your Story
+      </a>
+    </nav>
+  </div>
+
+  {# ---------- MOBILE INSHORTS-STYLE FEED (hidden on desktop) ---------- #}
+  <div class="mobile-feed" id="mobileFeed" aria-label="News feed">
+    <div class="mobile-feed-progress" id="feedProgress">
+      <span class="progress-current" id="progressCurrent">1</span>
+      <span class="progress-sep">/</span>
+      <span class="progress-total" id="progressTotal">1</span>
+    </div>
+    {% set mobile_posts = [] %}
+    {% for p in (carousel_items or []) %}
+      {% set _ = mobile_posts.append(p) %}
+    {% endfor %}
+    {% for p in (latest_updates or []) %}
+      {% if p not in mobile_posts %}
+        {% set _ = mobile_posts.append(p) %}
+      {% endif %}
+    {% endfor %}
+    {% for cat, posts in (by_category or {}).items() %}
+      {% for p in posts %}
+        {% if p not in mobile_posts %}
+          {% set _ = mobile_posts.append(p) %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    {% for p in mobile_posts %}
+    <article class="mobile-card" data-slug="{{ p.slug }}">
+      <div class="mobile-card-img">
+        {% if p.featured_image %}
+          <img src="{{ cld_url(p.featured_image, width=800, height=600) }}"
+               alt="{{ p.featured_image.alt_text or p.title }}"
+               loading="lazy" decoding="async" />
+        {% else %}
+          <div class="mobile-card-img-placeholder">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 21h16a2 2 0 002-2V5a2 2 0 00-2-2H4a2 2 0 00-2 2v14a2 2 0 002 2z"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5L5 21"/></svg>
+          </div>
+        {% endif %}
+        <div class="mobile-card-category">{{ p.category|replace('_',' ')|title }}</div>
+      </div>
+      <div class="mobile-card-content">
+        <h2 class="mobile-card-title">{{ p.title }}</h2>
+        {% if p.excerpt %}
+          <p class="mobile-card-excerpt">{{ p.excerpt }}</p>
+        {% endif %}
+        <div class="mobile-card-meta">
+          <span>DSVV Newsroom</span>
+          {% if p.published_at %}
+            <span class="meta-sep" aria-hidden="true">·</span>
+            <span>{{ p.published_at.strftime('%d %b %Y') }}</span>
+          {% endif %}
+        </div>
+        <div class="mobile-card-actions">
+          <a href="{{ url_for('web.news_detail', slug=p.slug) }}" class="mobile-btn-read">
+            Read Full Story
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </a>
+          <button class="mobile-btn-share" data-url="{{ request.url_root }}news/{{ p.slug }}" data-title="{{ p.title }}" aria-label="Share this story">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+    {% if not mobile_posts %}
+    <article class="mobile-card mobile-card-empty">
+      <div class="mobile-card-content" style="justify-content:center;align-items:center;text-align:center;height:100%;">
+        <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="var(--muted)" stroke-width="1.2"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/></svg>
+        <h2 style="margin-top:1.5rem;font-size:1.3rem;">No stories yet</h2>
+        <p style="color:var(--muted);margin-top:0.5rem;">Check back soon for the latest from campus.</p>
+      </div>
+    </article>
+    {% endif %}
+  </div>
+
   {% include 'public/_footer.html' %}
 
   <script>
@@ -255,6 +358,72 @@
       if (document.hidden) stop(); else start();
     });
     start();
+  })();
+
+  /* ---------- BURGER MENU JS ---------- */
+  (function(){
+    var burger = document.getElementById('mobileBurger');
+    var overlay = document.getElementById('mobileMenuOverlay');
+    if (!burger || !overlay) return;
+    burger.addEventListener('click', function() {
+      burger.classList.toggle('is-open');
+      overlay.classList.toggle('is-open');
+    });
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) {
+        burger.classList.remove('is-open');
+        overlay.classList.remove('is-open');
+      }
+    });
+    // Close menu when a link is clicked
+    var menuLinks = overlay.querySelectorAll('.mobile-menu-item');
+    menuLinks.forEach(function(link) {
+      link.addEventListener('click', function() {
+        burger.classList.remove('is-open');
+        overlay.classList.remove('is-open');
+      });
+    });
+  })();
+
+  /* ---------- MOBILE FEED JS ---------- */
+  (function(){
+    var feed = document.getElementById('mobileFeed');
+    if (!feed) return;
+    var cards = feed.querySelectorAll('.mobile-card');
+    var currentEl = document.getElementById('progressCurrent');
+    var totalEl = document.getElementById('progressTotal');
+    if (!cards.length || !currentEl || !totalEl) return;
+
+    totalEl.textContent = cards.length;
+
+    /* Track which card is visible via IntersectionObserver */
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var idx = Array.from(cards).indexOf(entry.target);
+          if (idx >= 0) currentEl.textContent = idx + 1;
+        }
+      });
+    }, { root: feed, threshold: 0.6 });
+    cards.forEach(function(card) { observer.observe(card); });
+
+    /* Share buttons */
+    feed.addEventListener('click', function(e) {
+      var btn = e.target.closest('.mobile-btn-share');
+      if (!btn) return;
+      var url = btn.getAttribute('data-url');
+      var title = btn.getAttribute('data-title');
+      if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(function(){});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+          btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#1c4c94" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+          setTimeout(function() {
+            btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+          }, 2000);
+        });
+      }
+    });
   })();
   </script>
 </body>
