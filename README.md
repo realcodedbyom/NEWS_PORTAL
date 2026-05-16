@@ -44,29 +44,39 @@ Behind it sits a role-based editorial CMS with a multi-stage publishing workflow
 
 ## Screenshots
 
-Drop screenshots into `docs/screenshots/` with the filenames below to have them render here.
+
 
 <div align="center">
 
 <table>
   <tr>
     <td align="center">
-      <img src="docs/screenshots/home.png" width="420" alt="Public homepage (News18-style)"><br/>
+      <img src="https://res.cloudinary.com/dolzialxp/image/upload/v1778958686/dsvv_news/screenshots/home.jpg" width="420" alt="Public homepage (News18-style)"><br/>
       <sub><b>Public homepage</b> — hero, top stories, breaking ticker</sub>
     </td>
     <td align="center">
-      <img src="docs/screenshots/category.png" width="420" alt="Category landing page"><br/>
+      <img src="https://res.cloudinary.com/dolzialxp/image/upload/v1778958708/dsvv_news/screenshots/category.jpg" width="420" alt="Category landing page"><br/>
       <sub><b>Category page</b> — grid of stories per section</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/screenshots/detail.png" width="420" alt="Article detail page"><br/>
+      <img src="https://res.cloudinary.com/dolzialxp/image/upload/v1778958720/dsvv_news/screenshots/detail.jpg" width="420" alt="Article detail page"><br/>
       <sub><b>Article detail</b> — breadcrumbs, share bar, related posts</sub>
     </td>
     <td align="center">
-      <img src="docs/screenshots/dashboard.png" width="420" alt="Newsroom dashboard"><br/>
+      <img src="https://res.cloudinary.com/dolzialxp/image/upload/v1778958746/dsvv_news/screenshots/dashboard.png" width="420" alt="Newsroom dashboard"><br/>
       <sub><b>Newsroom dashboard</b> — role-based CMS workflow</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://res.cloudinary.com/dolzialxp/image/upload/v1778958768/dsvv_news/screenshots/mobile_home.jpg" width="200" alt="Mobile feed (InShorts-style)"><br/>
+      <sub><b>Mobile feed</b> — InShorts-style card swipe</sub>
+    </td>
+    <td align="center">
+      <img src="https://res.cloudinary.com/dolzialxp/image/upload/v1778958777/dsvv_news/screenshots/mobile_detail.jpg" width="200" alt="Mobile article detail"><br/>
+      <sub><b>Mobile detail</b> — optimized reading view</sub>
     </td>
   </tr>
 </table>
@@ -75,15 +85,22 @@ Drop screenshots into `docs/screenshots/` with the filenames below to have them 
 
 ## Features
 
-### Public site (News18-style)
-- Red masthead with DSVV branding and in-page search
-- Sticky red navigation with category links
-- Live-pulse **breaking news** marquee (respects `prefers-reduced-motion`)
-- Hero story + numbered "Top Stories" aside
-- Horizontally scrollable "Latest News" rail
-- Per-category sections with "View All" links
-- "Most Read" trending strip
-- Accessible article detail page with breadcrumbs, share buttons (FB / X / WhatsApp / copy), and a "More in this category" sidebar
+### Public site (News18-style desktop + InShorts-style mobile)
+- **Desktop:** Red masthead with DSVV branding and in-page search
+- **Desktop:** Sticky red navigation with category links
+- **Desktop:** Live-pulse **breaking news** marquee (respects `prefers-reduced-motion`)
+- **Desktop:** Hero story + numbered "Top Stories" aside
+- **Desktop:** Horizontally scrollable "Latest News" rail
+- **Desktop:** Per-category sections with "View All" links
+- **Desktop:** "Most Read" trending strip
+- **Desktop:** Accessible article detail page with breadcrumbs, share buttons (FB / X / WhatsApp / copy), and a "More in this category" sidebar
+- **Mobile (≤720px):** InShorts-style full-screen card feed with vertical snap scrolling
+- **Mobile:** Fixed top bar with "DsvvNews" branding + hamburger menu
+- **Mobile:** Slide-in navigation drawer with categories, search, and submit
+- **Mobile:** Each card shows image, headline, excerpt, source, and action buttons (Read Full Story + Share)
+- **Mobile:** Progress counter (e.g., "3/12") tracks position in feed
+- **Mobile:** Native Web Share API integration with clipboard fallback
+- **Mobile:** Detail page optimized — fixed top bar with back arrow, full-width reading layout, share button
 
 ### Newsroom CMS
 - JWT + session auth with CSRF for server-rendered forms
@@ -455,18 +472,21 @@ Production checklist:
 
 ## Acknowledgements
 
+- **[@realcodedbyom](https://github.com/realcodedbyom)** (realcodedbyom@gmail.com) — creator, designer, and sole developer of DSVV News Portal
 - **Dev Sanskriti Vishwavidyalaya** — subject matter and brand context
-- **News18 India** — visual design inspiration for the public site
+- **News18 India** — visual design inspiration for the public desktop site
+- **InShorts** — design inspiration for the mobile card-feed experience
 - **Flask**, **MongoEngine**, **APScheduler**, and **Marshmallow** communities — for the libraries that power this project
 
 ## License
 
-Released under the **MIT License**.
+Released under the **MIT License**.  
+Copyright © 2025 [realcodedbyom](mailto:realcodedbyom@gmail.com)
 
 ---
 
 <div align="center">
 
-Built for <strong>Dev Sanskriti Vishwavidyalaya</strong> · Haridwar
+Built with ❤️ by <strong><a href="https://github.com/realcodedbyom">@realcodedbyom</a></strong> for <strong>Dev Sanskriti Vishwavidyalaya</strong> · Haridwar
 
 </div>
